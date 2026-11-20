@@ -76,7 +76,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
     private static final int REQUEST_PICK_M3U_FILE = 1001;
     private static final int REQUEST_STORAGE_PERMISSION = 1002;
     /** The part of the screen the panel covers; the rest keeps showing the picture. */
-    private static final float PANEL_WIDTH_SHARE = 2f / 3f;
+    private static final float PANEL_WIDTH_SHARE = 0.4f;
     private static final long SLIDE_IN_MS = 220L;
     private static final long SLIDE_OUT_MS = 180L;
     /** Same ceiling as ChannelRepository, so a playlist that loads here also loads there. */
@@ -101,6 +101,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
     private ToggleSwitchView mUpdateAutoCheckToggle;
     private ToggleSwitchView mMergeSameNameToggle;
     private ToggleSwitchView mCatchupBadgeToggle;
+    private ToggleSwitchView mClockAlwaysToggle;
     private TextView mUpdateStatusText;
     private TextView mUpdateChangelogText;
     private TextView mUpdateLastCheckText;
@@ -151,6 +152,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         mUpdateAutoCheckToggle = findViewById(R.id.update_auto_check_toggle);
         mMergeSameNameToggle = findViewById(R.id.merge_same_name_toggle);
         mCatchupBadgeToggle = findViewById(R.id.catchup_badge_toggle);
+        mClockAlwaysToggle = findViewById(R.id.clock_always_toggle);
         mUpdateStatusText = findViewById(R.id.update_status_text);
         mUpdateChangelogText = findViewById(R.id.update_changelog_text);
         mUpdateLastCheckText = findViewById(R.id.update_last_check_text);
@@ -340,6 +342,10 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
             // The badge belongs to the picture behind the panel, so it has to follow immediately.
             mHost.onConfigurationChanged();
         });
+        mClockAlwaysToggle.setOnCheckedChangeListener((btn, isChecked) -> {
+            AppConfig.setClockAlwaysOn(isChecked);
+            mHost.onConfigurationChanged();
+        });
         mUpdateAutoCheckToggle.setOnCheckedChangeListener((btn, isChecked) -> {
             AppConfig.setUpdateAutoCheckEnabled(isChecked);
             Toast.makeText(getContext(), isChecked ? R.string.update_auto_check_on
@@ -399,6 +405,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         mUpdateAutoCheckToggle.setChecked(AppConfig.isUpdateAutoCheckEnabled());
         mMergeSameNameToggle.setChecked(AppConfig.isMergeSameNameChannelsEnabled());
         mCatchupBadgeToggle.setChecked(AppConfig.isCatchupBadgeEnabled());
+        mClockAlwaysToggle.setChecked(AppConfig.isClockAlwaysOn());
         renderUpdateStatus();
         updateM3uEpgInfo();
         updateM3uFileInfo();

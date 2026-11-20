@@ -1586,8 +1586,10 @@ public class MainActivity extends Activity {
             hideChannelList();
             mChannelListVisible = false;
             Log.d(TAG, "handleOk - hiding list");
+        } else if (!isHudVisible() && !mOverlay.isPaused()) {
+            // 全屏第一次按 OK 只呼出 HUD，HUD 在时再按才暂停 / 继续
+            refreshTimeShiftBar(true);
         } else {
-            // 全屏：OK 暂停 / 继续
             togglePause();
         }
     }
@@ -1751,23 +1753,11 @@ public class MainActivity extends Activity {
         } else if (mChannelListVisible) {
             hideChannelList();
             mChannelListVisible = false;
-        } else if (mCatchup.active || mOverlay.isPaused()) {
-            // 回看中或暂停中：返回键一律先回到直播
-            backToLive();
         } else if (isHudVisible()) {
+            // 返回只收起 HUD，不改变播放状态：暂停仍暂停、回看仍回看
             mTimeShiftBar.hideSmooth();
         } else {
             showExitConfirmDialog();
-        }
-    }
-
-    /** 回到直播：退出回看，或从暂停恢复到最新画面。 */
-    private void backToLive() {
-        mOverlay.clearPause();
-        if (mCatchup.active) {
-            exitCatchupToLive();
-        } else {
-            playChannel(mCurrentChannelIndex);
         }
     }
 
@@ -1775,7 +1765,7 @@ public class MainActivity extends Activity {
         return mTimeShiftBar != null && mTimeShiftBar.getVisibility() == View.VISIBLE;
     }
 
-    /** 全屏 OK：暂停并显示 HUD；再按继续。 */
+    /** HUD 显示时的 OK：暂停（HUD 常驻）；再按继续。 */
     private void togglePause() {
         if (mOverlay.isPaused()) {
             mOverlay.clearPause();

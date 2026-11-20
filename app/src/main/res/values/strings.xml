@@ -105,6 +105,8 @@
     <string name="press_again_to_exit">Press BACK again to exit</string>
     <string name="display_section">Display</string>
     <string name="catchup_badge">Replay badge</string>
+    <string name="clock_always">Always show clock</string>
+    <string name="clock_always_hint">Keeps the clock in the top-right corner even when the info bar is hidden.</string>
     <string name="catchup_badge_hint">Shows a small replay mark in the corner while you are watching a replay.</string>
     <string name="back_to_live">Live</string>
 
@@ -167,7 +169,6 @@
     <string name="hint_pause">Pause</string>
     <string name="hint_resume">Resume</string>
     <string name="hint_seek">Rewind / Forward</string>
-    <string name="hint_back_live">Back to live</string>
     <string name="hint_hide">Hide</string>
     <string name="zap_source">Source %1$d/%2$d</string>
     <string name="buffering_speed">Buffering · %1$s</string>

@@ -108,6 +108,7 @@ public class AppConfig {
     private static final String UPDATE_PENDING_NAME_KEY = "app_update_pending_name";
     private static final String MERGE_SAME_NAME_CHANNELS_KEY = "app_merge_same_name_channels";
     private static final String CATCHUP_BADGE_KEY = "app_catchup_badge";
+    private static final String CLOCK_ALWAYS_KEY = "app_clock_always";
 
     private static final String DEFAULT_EPG_URL = "";
     /**
@@ -405,5 +406,14 @@ public class AppConfig {
 
     public static void setCatchupBadgeEnabled(boolean enabled) {
         write(CATCHUP_BADGE_KEY, enabled);
+    }
+
+    /** 右上角时钟是否常显（没有任何浮层时也显示）；默认关，只在浮层打开时显示。 */
+    public static boolean isClockAlwaysOn() {
+        return read(CLOCK_ALWAYS_KEY, false);
+    }
+
+    public static void setClockAlwaysOn(boolean on) {
+        write(CLOCK_ALWAYS_KEY, on);
     }
 }

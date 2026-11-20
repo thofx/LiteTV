@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 
 import com.cabletv.player.R;
+import com.cabletv.player.config.AppConfig;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -25,7 +26,7 @@ import java.util.Locale;
 public class CornerOverlay extends FrameLayout {
 
     public interface Host {
-        /** 是否显示时钟（有浮层打开，或设置为常显）。 */
+        /** 是否有浮层打开；打开时显示时钟和顶部渐变。设置为常显时只有时钟不受它影响。 */
         boolean wantsClock();
 
         /** 回看中慢于直播多少毫秒；不在回看中返回 -1。 */
@@ -96,9 +97,11 @@ public class CornerOverlay extends FrameLayout {
 
     private void tick() {
         Date now = new Date();
-        boolean clock = mHost.wantsClock();
+        boolean overlay = mHost.wantsClock();
+        // 常显时不铺顶部渐变，避免一直压暗画面；文字阴影足够看清
+        boolean clock = overlay || AppConfig.isClockAlwaysOn();
         mClock.setVisibility(clock ? VISIBLE : GONE);
-        mTopScrim.setVisibility(clock ? VISIBLE : GONE);
+        mTopScrim.setVisibility(overlay ? VISIBLE : GONE);
         mDate.setVisibility(clock ? VISIBLE : GONE);
         if (clock) {
             mClock.setText(mTimeFmt.format(now));

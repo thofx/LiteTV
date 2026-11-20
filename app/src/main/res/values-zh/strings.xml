@@ -105,6 +105,8 @@
     <string name="press_again_to_exit">再按一次返回键退出播放器</string>
     <string name="display_section">显示</string>
     <string name="catchup_badge">回放标记</string>
+    <string name="clock_always">时间常显</string>
+    <string name="clock_always_hint">信息栏收起后，右上角仍然显示当前时间。</string>
     <string name="catchup_badge_hint">回看时在画面角落显示一个小标记，提示当前不是直播。</string>
     <string name="back_to_live">回到直播</string>
 
@@ -167,7 +169,6 @@
     <string name="hint_pause">暂停</string>
     <string name="hint_resume">继续</string>
     <string name="hint_seek">快退 / 快进</string>
-    <string name="hint_back_live">回到直播</string>
     <string name="hint_hide">收起</string>
     <string name="zap_source">源 %1$d/%2$d</string>
     <string name="buffering_speed">缓冲中 · %1$s</string>

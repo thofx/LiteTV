@@ -133,13 +133,13 @@ public class SettingsPanelTest {
     }
 
     @Test
-    public void thePanelTakesTwoThirdsOfTheScreen() {
+    public void thePanelTakesTwoFifthsOfTheScreen() {
         android.widget.FrameLayout.LayoutParams lp = mPanel.createPanelLayoutParams();
         int screenWidth = RuntimeEnvironment.getApplication().getResources()
                 .getDisplayMetrics().widthPixels;
 
-        assertEquals("the panel must leave a third of the picture visible",
-                Math.round(screenWidth * 2f / 3f), lp.width);
+        assertEquals("the panel must leave most of the picture visible",
+                Math.round(screenWidth * 0.4f), lp.width);
         assertEquals("the panel hangs on the right edge",
                 android.view.Gravity.END, lp.gravity);
     }

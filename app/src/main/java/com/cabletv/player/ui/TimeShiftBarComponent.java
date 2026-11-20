@@ -274,13 +274,11 @@ public class TimeShiftBarComponent extends FrameLayout {
     /** 状态变化时重建按键提示：只列出当前真正可用的操作。 */
     private void renderHints() {
         mHintsRow.removeAllViews();
-        boolean replay = !mLiveMode;
         addHint(R.string.hint_key_ok, mPaused ? R.string.hint_resume : R.string.hint_pause);
         if (mCanSeek) {
             addHint(R.string.hint_key_lr, R.string.hint_seek);
         }
-        addHint(R.string.hint_key_back,
-                (replay || mPaused) ? R.string.hint_back_live : R.string.hint_hide);
+        addHint(R.string.hint_key_back, R.string.hint_hide);
     }
 
     private void addHint(int keyRes, int labelRes) {

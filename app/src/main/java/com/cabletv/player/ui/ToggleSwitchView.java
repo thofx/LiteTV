@@ -30,7 +30,8 @@ public class ToggleSwitchView extends View {
     private static final int TRACK_HEIGHT_DP = 26;
     private static final int TRACK_WIDTH_DP = 44;
     private static final int KNOB_MARGIN_DP = 3;
-    private static final int KNOB_SIZE_DP = 20;
+    /** 轨道四周留白：容纳聚焦放大和外圈描边，否则描边被 View 边界裁成直角。 */
+    private static final int RING_ROOM_DP = 6;
     private static final float FOCUS_SCALE = 1.08f;
 
     private final Paint mTrackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -77,7 +78,8 @@ public class ToggleSwitchView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMeasuredDimension(dp2px(TRACK_WIDTH_DP), dp2px(TRACK_HEIGHT_DP));
+        setMeasuredDimension(dp2px(TRACK_WIDTH_DP + 2 * RING_ROOM_DP),
+                dp2px(TRACK_HEIGHT_DP + 2 * RING_ROOM_DP));
     }
 
     @Override
@@ -87,18 +89,18 @@ public class ToggleSwitchView extends View {
         float pivotY = getHeight() / 2f;
         canvas.scale(mScale, mScale, pivotX, pivotY);
 
-        float inset = dp2px(1);
+        float inset = dp2px(RING_ROOM_DP);
         mTrackRect.set(inset, inset, getWidth() - inset, getHeight() - inset);
         mTrackPaint.setColor(mChecked
                 ? Color.parseColor("#E11D48")
                 : Color.parseColor("#3A3A40"));
-        canvas.drawRoundRect(mTrackRect, getHeight() / 2f, getHeight() / 2f, mTrackPaint);
+        canvas.drawRoundRect(mTrackRect, mTrackRect.height() / 2f, mTrackRect.height() / 2f, mTrackPaint);
 
-        float knobSize = dp2px(KNOB_SIZE_DP);
+        // 圆点直径由轨道高度推出，上下留白一致，保证垂直居中
         float margin = dp2px(KNOB_MARGIN_DP);
+        float knobSize = mTrackRect.height() - 2 * margin;
         float left = mChecked ? mTrackRect.right - margin - knobSize : mTrackRect.left + margin;
-        mKnobRect.set(left, mTrackRect.top + margin, left + knobSize,
-                mTrackRect.top + margin + knobSize);
+        mKnobRect.set(left, mTrackRect.top + margin, left + knobSize, mTrackRect.bottom - margin);
         mKnobPaint.setColor(Color.WHITE);
         canvas.drawOval(mKnobRect, mKnobPaint);
 
