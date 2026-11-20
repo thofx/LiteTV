@@ -1132,6 +1132,9 @@ public class EpgManager {
                 com.cabletv.player.util.TlsCompat.applyTo((javax.net.ssl.HttpsURLConnection) connection);
             }
             connection.setRequestMethod("GET");
+            // 不复用连接池里的旧连接：部分服务器 keep-alive 只保持几秒，
+            // 复用已被对端关闭的连接会报 "unexpected end of stream"
+            connection.setRequestProperty("Connection", "close");
             connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(READ_TIMEOUT_MS);
             connection.setInstanceFollowRedirects(false);
