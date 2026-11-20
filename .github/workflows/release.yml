@@ -80,6 +80,8 @@ jobs:
 
       - name: Release notes and update.json
         run: |
+          # actions/checkout 会把注释标签取成轻量标签，%(contents) 就成了提交说明；重新取一次标签对象
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
           git tag -l --format='%(contents)' "$TAG" > dist/notes.md
           scripts/make-update-json.sh "$VERSION_NAME" "$VERSION_CODE" dist "$TAG" dist/notes.md
           cat dist/update.json
