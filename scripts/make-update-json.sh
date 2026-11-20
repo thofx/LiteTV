@@ -32,7 +32,7 @@
 set -euo pipefail
 
 ABIS=(arm64-v8a armeabi-v7a x86_64 x86)
-DEFAULT_SLUG="vibe4free/LiteTV"
+DEFAULT_SLUG="thofx/LiteTV"
 MAX_CHANGELOG_LINES=8
 MAX_CHANGELOG_LINE_CHARS=90
 

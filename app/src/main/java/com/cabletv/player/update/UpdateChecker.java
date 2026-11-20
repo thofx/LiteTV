@@ -13,7 +13,7 @@ public class UpdateChecker {
      * this instead of the GitHub API avoids the 60-per-hour anonymous rate limit.
      */
     public static final String MANIFEST_URL =
-            "https://github.com/vibe4free/LiteTV/releases/latest/download/update.json";
+            "https://github.com/thofx/LiteTV/releases/latest/download/update.json";
 
     private final UpdateFetcher mFetcher;
 

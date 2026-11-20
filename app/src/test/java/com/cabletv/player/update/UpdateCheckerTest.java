@@ -76,7 +76,7 @@ public class UpdateCheckerTest {
         RecordingFetcher fetcher = new RecordingFetcher(manifestJson(6, "arm64-v8a"));
         new UpdateChecker(fetcher).check(6, ARM64_DEVICE);
         assertEquals("the fixed asset name is what makes releases/latest/download/ work",
-                "https://github.com/vibe4free/LiteTV/releases/latest/download/update.json",
+                "https://github.com/thofx/LiteTV/releases/latest/download/update.json",
                 fetcher.requestedUrl);
     }
 
