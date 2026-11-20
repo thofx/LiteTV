@@ -66,6 +66,12 @@ public class ProgramTimelineView extends View {
         void onScrubCommit(long timeMs);
     }
 
+    /**
+     * 轨道左右内边距：圆点（半径 5.5dp + 光圈 2.5dp）走到两端时不被裁掉。
+     * HUD 的起止时间行用同一数值内缩，保持与轨道两端对齐。
+     */
+    public static final int EDGE_PAD_DP = 9;
+
     private final List<Segment> mSegments = new ArrayList<>();
     private OnScrubListener mScrubListener;
     /** True between the finger going down and coming back up. */
@@ -81,11 +87,11 @@ public class ProgramTimelineView extends View {
 
     public ProgramTimelineView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        mTrackPaint.setColor(Color.parseColor("#141D2B"));
-        mSegmentPaint.setColor(Color.parseColor("#1E2B3E"));
-        mCurrentPaint.setColor(Color.parseColor("#00E5FF"));
+        mTrackPaint.setColor(0x33FFFFFF);
+        mSegmentPaint.setColor(0x1AFFFFFF);
+        mCurrentPaint.setColor(0xFFE11D48);
         mPlayheadPaint.setColor(Color.WHITE);
-        mLivePaint.setColor(Color.parseColor("#FF7A00"));
+        mLivePaint.setColor(0x80FFFFFF);
         setClickable(true);
     }
 
@@ -199,9 +205,11 @@ public class ProgramTimelineView extends View {
     /** Maps a touch to a moment and reports it; the drawing uses the very same mapping. */
     private void moveToX(float x) {
         long span = mWindowEndMs - mWindowStartMs;
-        float clamped = Math.max(0f, Math.min(getWidth(), x));
+        float pad = dp2px(EDGE_PAD_DP);
+        float trackWidth = Math.max(1f, getWidth() - 2 * pad);
+        float clamped = Math.max(0f, Math.min(trackWidth, x - pad));
         mPositionMs = Math.max(mWindowStartMs,
-                Math.min(mWindowEndMs, mWindowStartMs + (long) (clamped / getWidth() * span)));
+                Math.min(mWindowEndMs, mWindowStartMs + (long) (clamped / trackWidth * span)));
         invalidate();
         if (mScrubListener != null) {
             mScrubListener.onScrubTo(mPositionMs);
@@ -216,11 +224,20 @@ public class ProgramTimelineView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        int width = getWidth();
+        int pad = dp2px(EDGE_PAD_DP);
+        int width = getWidth() - 2 * pad;
         int height = getHeight();
         if (width <= 0 || height <= 0) {
             return;
         }
+        // 整条轨道向内缩 pad，圆点在两端也完整
+        canvas.save();
+        canvas.translate(pad, 0);
+        drawTrack(canvas, width, height);
+        canvas.restore();
+    }
+
+    private void drawTrack(Canvas canvas, int width, int height) {
         float trackHeight = dp2px(TRACK_HEIGHT_DP);
         float top = (height - trackHeight) / 2f;
         float gap = dp2px(SEGMENT_GAP_DP);
@@ -254,17 +271,18 @@ public class ProgramTimelineView extends View {
         // The live edge: a bright line at the end of the track, so it is clear where "now" is.
         if (mLiveEdgeVisible) {
             float x = width - dp2px(1.5f);
-            mRect.set(x, top - dp2px(3), x + dp2px(3), top + trackHeight + dp2px(3));
+            mRect.set(x, top - dp2px(2), x + dp2px(1.5f), top + trackHeight + dp2px(2));
             canvas.drawRect(mRect, mLivePaint);
         }
 
         // The playhead thumb: modern circular marker with cyan outer glow and white center
         float thumbRadius = dp2px(5.5f);
         float centerY = top + trackHeight / 2f;
-        mPlayheadPaint.setColor(Color.parseColor("#00E5FF"));
-        canvas.drawCircle(headX, centerY, thumbRadius, mPlayheadPaint);
+        // 白色圆点 + 淡红色光圈
+        mPlayheadPaint.setColor(0x59E11D48);
+        canvas.drawCircle(headX, centerY, thumbRadius + dp2px(2.5f), mPlayheadPaint);
         mPlayheadPaint.setColor(Color.WHITE);
-        canvas.drawCircle(headX, centerY, dp2px(2.5f), mPlayheadPaint);
+        canvas.drawCircle(headX, centerY, thumbRadius, mPlayheadPaint);
     }
 
     private float xFor(long timeMs, long span, int width) {

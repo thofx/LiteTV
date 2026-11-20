@@ -79,13 +79,19 @@ public class SeekKeyPolicyTest {
     }
 
     /**
-     * Full screen LEFT must rewind from this moment. It used to fall through to the "enter
-     * catchup" shortcut, which restarted the programme from its beginning.
+     * 新交互：HUD 显示时左右键是快进快退（直播中按左键从当前时刻回退）。
      */
     @Test
-    public void fullScreenMeansSeek() {
-        assertTrue("watching live, list closed", SeekKeyPolicy.appliesOnScreen(false));
-        assertTrue("rewinding, list closed", SeekKeyPolicy.appliesOnScreen(false));
+    public void hudOnScreenMeansSeek() {
+        assertTrue("HUD shown, list closed", SeekKeyPolicy.appliesOnScreen(false, true));
+    }
+
+    /**
+     * 新交互：HUD 不在时左右键分别打开频道列表和设置，不再回退。
+     */
+    @Test
+    public void withoutHudTheKeysOpenListAndSettings() {
+        assertFalse(SeekKeyPolicy.appliesOnScreen(false, false));
     }
 
     /**
@@ -94,18 +100,8 @@ public class SeekKeyPolicyTest {
      */
     @Test
     public void anOpenListOwnsTheKeysDuringAReplayToo() {
-        assertFalse("the columns need the keys", SeekKeyPolicy.appliesOnScreen(true));
-    }
-
-    /**
-     * The list must keep the keys during a replay: opening the guide while rewinding used to
-     * leave its columns unreachable, because the replay still owned LEFT and RIGHT.
-     */
-    @Test
-    public void replayDoesNotStealTheKeysFromAnOpenList() {
-        assertFalse(SeekKeyPolicy.appliesOnScreen(true));
-        assertTrue("with the list closed the strip works as before",
-                SeekKeyPolicy.appliesOnScreen(false));
+        assertFalse("the columns need the keys", SeekKeyPolicy.appliesOnScreen(true, true));
+        assertFalse(SeekKeyPolicy.appliesOnScreen(true, false));
     }
 
     @Test

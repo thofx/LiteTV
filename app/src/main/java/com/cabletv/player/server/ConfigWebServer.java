@@ -391,7 +391,6 @@ public class ConfigWebServer {
         // Display and playback preferences, so the web page and the TV settings screen expose the
         // same configuration instead of each covering half of it.
         config.addProperty("epg_display_enabled", AppConfig.isEpgDisplayEnabled());
-        config.addProperty("sidebar_opacity", AppConfig.getSidebarOpacity());
         config.addProperty("catchup_badge", AppConfig.isCatchupBadgeEnabled());
         config.addProperty("video_render_mode",
                 AppConfig.getVideoRenderMode() == AppConfig.RENDER_TEXTURE ? "texture" : "surface");
@@ -557,16 +556,13 @@ public class ConfigWebServer {
         try {
             Map<String, String> params = parseFormData(body);
             String epgDisplay = params.get("epg_display_enabled");
-            String opacity = params.get("sidebar_opacity");
             String catchupBadge = params.get("catchup_badge");
-            if (!isValidFlag(epgDisplay) || !isValidOpacity(opacity) || !isValidFlag(catchupBadge)) {
+            // sidebar_opacity 已移除（面板固定不透底）；旧页面若还提交该字段，直接忽略
+            if (!isValidFlag(epgDisplay) || !isValidFlag(catchupBadge)) {
                 return jsonResult(false, "Invalid display setting");
             }
             if (epgDisplay != null) {
                 AppConfig.setEpgDisplayEnabled("1".equals(epgDisplay));
-            }
-            if (opacity != null) {
-                AppConfig.setSidebarOpacity(Integer.parseInt(opacity));
             }
             if (catchupBadge != null) {
                 AppConfig.setCatchupBadgeEnabled("1".equals(catchupBadge));
@@ -599,13 +595,6 @@ public class ConfigWebServer {
 
     private static boolean isValidFlag(String value) {
         return value == null || "0".equals(value) || "1".equals(value);
-    }
-
-    private static boolean isValidOpacity(String value) {
-        if (value == null) {
-            return true;
-        }
-        return "0".equals(value) || "1".equals(value) || "2".equals(value);
     }
 
     private static String jsonResult(boolean success, String message) {

@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cabletv.player.R;
-import com.cabletv.player.config.AppConfig;
 import com.cabletv.player.config.ChannelNavigator;
 import com.cabletv.player.epg.EpgCache;
 import com.cabletv.player.epg.EpgManager;
@@ -58,9 +57,6 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
     private int mCurrentChannelIndex = 0;
     private int mSelectedChannelIndex = 0;
     private int mSelectedProgramIndex = 0;
-    private TextView mPrevDayView;
-    private TextView mProgramTitleView;
-    private TextView mNextDayView;
     /**
      * Guide day currently shown, relative to today: 0 = today, -1 = yesterday, ... -6.
      * Navigated with LEFT/RIGHT while the programme column has focus.
@@ -68,8 +64,8 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
     /** One scroller for the whole list: only the highlighted row's label moves. */
     private final RowLabelScroller mLabelScroller = new RowLabelScroller();
     private ProgramListAdapter mProgramAdapterRef;
+    private View mEdgeFade;
 
-    private int mDayOffset = 0;
     /**
      * The moment the guide should land on: the current time for live television, or the start of
      * the programme being replayed during catchup. 0 means "follow the clock".
@@ -77,8 +73,6 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
     private long mProgramFocusTimeMs = 0;
     private static final int MAX_DAY_BACK = 6;  // today plus six days back = the 7-day window
     private static final int MAX_DAY_AHEAD = 1; // feeds (51zmt etc.) often carry tomorrow
-    /** Day offsets (within the window) that the selected channel actually has data for. */
-    private java.util.List<Integer> mAvailableDayOffsets = new ArrayList<>();
     private OnChannelSelectedListener mSelectionListener;
     private OnProgramClickListener mProgramClickListener;
     private EpgManager mEpgManager;
@@ -130,15 +124,12 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         LinearLayout groupSection = new LinearLayout(context);
         mGroupSection = groupSection;
         groupSection.setOrientation(LinearLayout.VERTICAL);
-        groupSection.setLayoutParams(new LinearLayout.LayoutParams(dp2px(176), LayoutParams.MATCH_PARENT));
+        groupSection.setLayoutParams(new LinearLayout.LayoutParams(dp2px(200), LayoutParams.MATCH_PARENT));
         groupSection.setVisibility(GONE);
 
         TextView groupTitle = new TextView(context);
         groupTitle.setText(R.string.groups);
-        groupTitle.setTextColor(0xFF00E5FF);
-        groupTitle.setTextSize(15);
-        groupTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        groupTitle.setPadding(dp2px(12), dp2px(12), dp2px(12), dp2px(12));
+        styleColumnTitle(groupTitle);
         groupTitle.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         groupSection.addView(groupTitle);
 
@@ -160,16 +151,13 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         LinearLayout channelSection = new LinearLayout(context);
         mChannelSection = channelSection;
         channelSection.setOrientation(LinearLayout.VERTICAL);
-        channelSection.setLayoutParams(new LinearLayout.LayoutParams(dp2px(240), LayoutParams.MATCH_PARENT));
+        channelSection.setLayoutParams(new LinearLayout.LayoutParams(dp2px(300), LayoutParams.MATCH_PARENT));
 
         // Names the group being browsed: the group column is usually folded away, so this is the
         // only thing telling the viewer which list they are looking at.
         mTitleView = new TextView(context);
         mTitleView.setText(R.string.channel_list);
-        mTitleView.setTextColor(0xFF00E5FF);
-        mTitleView.setTextSize(15);
-        mTitleView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        mTitleView.setPadding(dp2px(12), dp2px(12), dp2px(12), dp2px(12));
+        styleColumnTitle(mTitleView);
         mTitleView.setSingleLine();
         mTitleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         mTitleView.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
@@ -186,7 +174,7 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         // Shown in place of the list when the selected group has nothing in it, so an empty
         // favourites group explains itself instead of looking broken.
         mEmptyView = new TextView(context);
-        mEmptyView.setTextColor(0xFF999999);
+        mEmptyView.setTextColor(0xFFA1A1AA);
         mEmptyView.setTextSize(13);
         mEmptyView.setGravity(Gravity.CENTER);
         mEmptyView.setPadding(dp2px(16), dp2px(24), dp2px(16), dp2px(16));
@@ -199,46 +187,15 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         // Program list section (right side, initially hidden)
         mProgramListContainer = new LinearLayout(context);
         mProgramListContainer.setOrientation(LinearLayout.VERTICAL);
-        mProgramListContainer.setLayoutParams(new LinearLayout.LayoutParams(dp2px(372), LayoutParams.MATCH_PARENT));
+        mProgramListContainer.setLayoutParams(new LinearLayout.LayoutParams(dp2px(340), LayoutParams.MATCH_PARENT));
         mProgramListContainer.setVisibility(GONE);
 
-        // 3-Day Segmented Date Tabs (Yesterday | Today · LIVE | Tomorrow)
-        LinearLayout dateTabsBar = new LinearLayout(context);
-        dateTabsBar.setOrientation(LinearLayout.HORIZONTAL);
-        dateTabsBar.setGravity(Gravity.CENTER_VERTICAL);
-        dateTabsBar.setBackgroundResource(R.drawable.bg_date_tabs_bar);
-        LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT, dp2px(36));
-        dateLp.setMargins(dp2px(10), dp2px(8), dp2px(10), dp2px(4));
-        dateTabsBar.setLayoutParams(dateLp);
-        dateTabsBar.setPadding(dp2px(3), dp2px(2), dp2px(3), dp2px(2));
-
-        mPrevDayView = new TextView(context);
-        mPrevDayView.setGravity(Gravity.CENTER);
-        mPrevDayView.setTextSize(11);
-        mPrevDayView.setTextColor(0xFF94A3B8);
-        mPrevDayView.setSingleLine(true);
-        mPrevDayView.setOnClickListener(v -> moveProgramDay(-1));
-        dateTabsBar.addView(mPrevDayView, new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1.0f));
-
-        mProgramTitleView = new TextView(context);
-        mProgramTitleView.setGravity(Gravity.CENTER);
-        mProgramTitleView.setTextSize(12);
-        mProgramTitleView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        mProgramTitleView.setTextColor(0xFF00E5FF);
-        mProgramTitleView.setBackgroundResource(R.drawable.bg_date_capsule);
-        mProgramTitleView.setSingleLine(true);
-        dateTabsBar.addView(mProgramTitleView, new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1.25f));
-
-        mNextDayView = new TextView(context);
-        mNextDayView.setGravity(Gravity.CENTER);
-        mNextDayView.setTextSize(11);
-        mNextDayView.setTextColor(0xFF94A3B8);
-        mNextDayView.setSingleLine(true);
-        mNextDayView.setOnClickListener(v -> moveProgramDay(1));
-        dateTabsBar.addView(mNextDayView, new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1.0f));
-
-        mProgramListContainer.addView(dateTabsBar);
+        // 节目单是一条连续列表，每天第一个节目上方由 DayHeaderDecoration 画日期标题
+        TextView guideTitle = new TextView(context);
+        guideTitle.setText(R.string.guide_title);
+        styleColumnTitle(guideTitle);
+        mProgramListContainer.addView(guideTitle, new LinearLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
         mProgramRecyclerView = new RecyclerView(context);
         mProgramRecyclerView.setItemAnimator(null);
@@ -246,11 +203,16 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         mProgramRecyclerView.setLayoutManager(new CenteringLayoutManager(context));
         mProgramRecyclerView.setBackgroundColor(0x00000000);
         mProgramRecyclerView.setFocusable(false);
+        mProgramRecyclerView.addItemDecoration(new DayHeaderDecoration(context));
         mProgramListContainer.addView(mProgramRecyclerView);
 
         mainContainer.addView(mProgramListContainer);
+
+        // 面板右缘的渐隐，避免实色块硬切画面
+        mEdgeFade = new View(context);
+        mainContainer.addView(mEdgeFade, new LinearLayout.LayoutParams(dp2px(140), LayoutParams.MATCH_PARENT));
         addView(mainContainer);
-        applyOpacity();
+        applyBackground();
     }
 
     /**
@@ -258,43 +220,46 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
      * the original look — a faded panel over the video — while the other two keep the panels at full
      * strength and darken what shows through, so the text stays crisp.
      */
-    public void applyOpacity() {
-        int level = AppConfig.getSidebarOpacity();
-        setAlpha(1f);
-        int channelBg;
-        int programBg;
-        int groupBg;
-        switch (level) {
-            case AppConfig.SIDEBAR_OPAQUE:
-                channelBg = 0xFF0D111A;
-                programBg = 0xFF080D14;
-                groupBg = 0xFF11161D;
-                setBackgroundColor(0xFF0D111A);
-                break;
-            case AppConfig.SIDEBAR_SEMI_OPAQUE:
-                // Enhanced semi-opaque: deep obsidian tint (~85%-90% opacity)
-                channelBg = 0xE00D111A;
-                programBg = 0xE6080D14;
-                groupBg = 0xD911161D;
-                setBackgroundColor(0x00000000);
-                break;
-            default: // SIDEBAR_TRANSLUCENT
-                // Enhanced translucent: solid enough for crisp contrast (~65%-75% opacity)
-                channelBg = 0xB30D111A;
-                programBg = 0xC0080D14;
-                groupBg = 0xA611161D;
-                setBackgroundColor(0x00000000);
-                break;
+    /** 面板底色：固定近乎不透明，视频不会从栏里透出台标和字幕。 */
+    private static final int PANEL_BG = 0xFA08080A;
+
+    private void applyBackground() {
+        if (mGroupSection != null) {
+            mGroupSection.setBackgroundColor(PANEL_BG);
         }
         if (mChannelSection != null) {
-            mChannelSection.setBackgroundColor(channelBg);
+            mChannelSection.setBackgroundColor(PANEL_BG);
         }
         if (mProgramListContainer != null) {
-            mProgramListContainer.setBackgroundColor(programBg);
+            mProgramListContainer.setBackgroundColor(PANEL_BG);
         }
-        if (mGroupSection != null) {
-            mGroupSection.setBackgroundColor(groupBg);
+        if (mEdgeFade != null) {
+            mEdgeFade.setBackground(new android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                    edgeFadeColors(PANEL_BG)));
         }
+    }
+
+    /**
+     * 面板右缘的渐隐色阶：按 ease-out 曲线取多段透明度，比两段线性渐变自然，不会出现一道「污渍」。
+     */
+    static int[] edgeFadeColors(int bg) {
+        float[] curve = {1f, 0.88f, 0.68f, 0.46f, 0.27f, 0.12f, 0.03f, 0f};
+        int alpha = (bg >>> 24) & 0xFF;
+        int rgb = bg & 0x00FFFFFF;
+        int[] colors = new int[curve.length];
+        for (int i = 0; i < curve.length; i++) {
+            colors[i] = (Math.round(alpha * curve[i]) << 24) | rgb;
+        }
+        return colors;
+    }
+
+    private void styleColumnTitle(TextView title) {
+        title.setTextColor(0xFF8A8A93);
+        title.setTextSize(13);
+        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        title.setLetterSpacing(0.08f);
+        title.setPadding(dp2px(20), dp2px(24), dp2px(16), dp2px(12));
     }
 
     public void setEpgManager(EpgManager epgManager) {
@@ -467,21 +432,20 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
             return;
         }
 
-        // Days with data for this channel, relative to today, within the rolling 7-day window.
+        // 7 天回看窗口 + 明天，连成一条列表
         long todayDay = EpgCache.localDayNumber(System.currentTimeMillis());
-        java.util.TreeSet<Integer> available = new java.util.TreeSet<>();
+        List<EpgManager.Program> windowPrograms = new ArrayList<>();
         for (EpgManager.Program program : programs) {
-            int offset = (int) (EpgCache.localDayNumber(program.startTime) - todayDay);
+            long offset = EpgCache.localDayNumber(program.startTime) - todayDay;
             if (offset >= -MAX_DAY_BACK && offset <= MAX_DAY_AHEAD) {
-                available.add(offset);
+                windowPrograms.add(program);
             }
         }
-        mAvailableDayOffsets = new ArrayList<>(available);
-        if (!mAvailableDayOffsets.contains(mDayOffset)) {
-            mDayOffset = nearestAvailableDayOffset();
+        if (windowPrograms.isEmpty()) {
+            hideProgramList();
+            return;
         }
-        List<EpgManager.Program> dayPrograms = filterProgramsForDay(programs, mDayOffset);
-        ProgramListAdapter programAdapter = new ProgramListAdapter(getContext(), dayPrograms, mLabelScroller);
+        ProgramListAdapter programAdapter = new ProgramListAdapter(getContext(), windowPrograms, mLabelScroller);
         programAdapter.setChannel(selectedChannel);
         mProgramAdapterRef = programAdapter;
         programAdapter.setRowClickListener(this::onProgramRowTap);
@@ -489,18 +453,13 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
         mProgramListContainer.setVisibility(VISIBLE);
         mProgramListVisible = true;
 
-        // Land on the programme the viewer is watching — the one airing now, or the one being
-        // replayed — but only on the day that moment belongs to. Other days start at the top.
-        int selectIndex = 0;
+        // 落在正在看的节目上：直播时是当前节目，回看时是正在回看的节目
         long focusTime = mProgramFocusTimeMs > 0 ? mProgramFocusTimeMs : System.currentTimeMillis();
-        if (mDayOffset == (int) (EpgCache.localDayNumber(focusTime) - todayDay)) {
-            selectIndex = nearestProgramIndex(dayPrograms, focusTime);
-        }
+        int selectIndex = nearestProgramIndex(windowPrograms, focusTime);
         mSelectedProgramIndex = selectIndex;
         programAdapter.setSelectedIndex(selectIndex);
         programAdapter.setFocused(mFocusPanel == FocusPanel.PROGRAMS);
         scrollToCentered(mProgramRecyclerView, selectIndex, PROGRAM_ROW_HEIGHT_DP);
-        updateProgramTitle();
     }
 
     /**
@@ -510,11 +469,6 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
      */
     public void setProgramFocusTime(long timeMs) {
         mProgramFocusTimeMs = timeMs;
-        long today = EpgCache.localDayNumber(System.currentTimeMillis());
-        int offset = (int) (EpgCache.localDayNumber(timeMs) - today);
-        if (offset >= -MAX_DAY_BACK && offset <= MAX_DAY_AHEAD) {
-            mDayOffset = offset;
-        }
         refreshProgramListForCurrentSelection();
     }
 
@@ -541,113 +495,6 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
             }
         }
         return best;
-    }
-
-    /** Programmes whose start falls on the given day (relative to today). */
-    private List<EpgManager.Program> filterProgramsForDay(List<EpgManager.Program> all, int offset) {
-        long targetDay = EpgCache.localDayNumber(System.currentTimeMillis()) + offset;
-        List<EpgManager.Program> dayPrograms = new ArrayList<>();
-        for (EpgManager.Program program : all) {
-            if (EpgCache.localDayNumber(program.startTime) == targetDay) {
-                dayPrograms.add(program);
-            }
-        }
-        return dayPrograms;
-    }
-
-    /** Nearest offset to today among the available ones (prefers today itself). */
-    private int nearestAvailableDayOffset() {
-        if (mAvailableDayOffsets.isEmpty()) {
-            return 0;
-        }
-        if (mAvailableDayOffsets.contains(0)) {
-            return 0;
-        }
-        int best = mAvailableDayOffsets.get(0);
-        for (Integer offset : mAvailableDayOffsets) {
-            if (Math.abs(offset) < Math.abs(best)) {
-                best = offset;
-            }
-        }
-        return best;
-    }
-
-    /**
-     * Moves the guide to the previous/next day that has data for the selected channel.
-     *
-     * @return true when the day actually changed, false when there is no day that way (the caller
-     *         lets the focus leave the column then, instead of leaving LEFT looking like a dead key)
-     */
-    public boolean moveProgramDay(int delta) {
-        int next = nextDayIndex(mAvailableDayOffsets, mDayOffset, delta);
-        if (next < 0) {
-            return false;
-        }
-        mDayOffset = mAvailableDayOffsets.get(next);
-        refreshProgramListForCurrentSelection();
-        return true;
-    }
-
-    /**
-     * Index of the day a step would land on, or -1 when the step changes nothing (no days at all,
-     * or already at that end). Kept separate from the list handling so the boundary is testable.
-     */
-    static int nextDayIndex(java.util.List<Integer> availableDays, int currentOffset, int delta) {
-        if (availableDays == null || availableDays.isEmpty()) {
-            return -1;
-        }
-        int index = availableDays.indexOf(currentOffset);
-        if (index < 0) {
-            // The selection is not one of the days on offer (the data moved on); stepping has no
-            // meaningful target, so it reports "no move" rather than jumping somewhere.
-            return -1;
-        }
-        int next = Math.max(0, Math.min(availableDays.size() - 1, index + delta));
-        return next == index ? -1 : next;
-    }
-
-    private void updateProgramTitle() {
-        if (mProgramTitleView == null) {
-            return;
-        }
-        int prevOffset = mDayOffset - 1;
-        int currOffset = mDayOffset;
-        int nextOffset = mDayOffset + 1;
-
-        // Middle: Current Selected Day (Focused Capsule)
-        mProgramTitleView.setText(formatDayLabel(currOffset));
-
-        // Left: Previous Day
-        if (mPrevDayView != null) {
-            boolean hasPrev = mAvailableDayOffsets.contains(prevOffset);
-            mPrevDayView.setText(formatDayLabel(prevOffset));
-            mPrevDayView.setTextColor(hasPrev ? 0xFF94A3B8 : 0xFF475569);
-            mPrevDayView.setClickable(hasPrev);
-        }
-
-        // Right: Next Day
-        if (mNextDayView != null) {
-            boolean hasNext = mAvailableDayOffsets.contains(nextOffset);
-            mNextDayView.setText(formatDayLabel(nextOffset));
-            mNextDayView.setTextColor(hasNext ? 0xFF94A3B8 : 0xFF475569);
-            mNextDayView.setClickable(hasNext);
-        }
-    }
-
-    private String formatDayLabel(int offset) {
-        java.util.Calendar cal = java.util.Calendar.getInstance();
-        cal.add(java.util.Calendar.DAY_OF_YEAR, offset);
-        SimpleDateFormat sdf = new SimpleDateFormat("MM-dd", Locale.getDefault());
-        String dateStr = sdf.format(cal.getTime());
-        if (offset == 0) {
-            return getContext().getString(R.string.day_today) + " " + dateStr;
-        } else if (offset == -1) {
-            return getContext().getString(R.string.day_yesterday) + " " + dateStr;
-        } else if (offset == 1) {
-            return getContext().getString(R.string.day_tomorrow) + " " + dateStr;
-        } else {
-            return dateStr;
-        }
     }
 
     private void hideProgramList() {
@@ -812,16 +659,6 @@ public class ChannelListComponent extends FrameLayout implements IControlCompone
             return;
         }
         scroller.attach(view, scrolling);
-    }
-
-    /** Puts the cursor on the first or the last programme of the day currently shown. */
-    public void selectProgramEdge(boolean first) {
-        RecyclerView.Adapter<?> adapter = mProgramRecyclerView.getAdapter();
-        if (adapter == null || adapter.getItemCount() == 0) return;
-        int index = first ? 0 : adapter.getItemCount() - 1;
-        mSelectedProgramIndex = index;
-        ((ProgramListAdapter) adapter).setSelectedIndex(index);
-        scrollToCentered(mProgramRecyclerView, index, PROGRAM_ROW_HEIGHT_DP);
     }
 
     @Override

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 单选圆点：焦点时深色，选中时影院红，否则灰 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#0A0A0B" android:state_focused="true" />
+    <item android:color="#E11D48" android:state_checked="true" />
+    <item android:color="#8A8A93" />
+</selector>

@@ -618,14 +618,6 @@
                     </label>
                 </div>
 
-                <div class="form-group">
-                    <label for="sidebarOpacity">电视端频道侧边栏背景风格:</label>
-                    <select id="sidebarOpacity" class="field">
-                        <option value="0">半透明深黑 (默认 Modern 悬浮)</option>
-                        <option value="1">半不透明</option>
-                        <option value="2">深曜石黑全不透明 (高对比度)</option>
-                    </select>
-                </div>
 
                 <div class="form-group">
                     <label for="epgDisplay">三栏列表展开时显示右侧节目单:</label>
@@ -845,8 +837,7 @@
                 + '&video_decode_mode=' + encodeURIComponent(document.getElementById('videoDecodeMode').value)
                 + '&video_tunneling=' + (document.getElementById('videoTunneling').checked ? '1' : '0');
             const display = 'epg_display_enabled=' + encodeURIComponent(document.getElementById('epgDisplay').value)
-                + '&catchup_badge=' + encodeURIComponent(document.getElementById('catchupBadge').value)
-                + '&sidebar_opacity=' + encodeURIComponent(document.getElementById('sidebarOpacity').value);
+                + '&catchup_badge=' + encodeURIComponent(document.getElementById('catchupBadge').value);
             Promise.all([
                 fetch('/config/playback', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: playback}),
                 fetch('/config/display', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: display})
@@ -960,7 +951,6 @@
                 document.getElementById('videoTunneling').checked = !!d.video_tunneling;
                 document.getElementById('epgDisplay').value = d.epg_display_enabled === false ? '0' : '1';
                 document.getElementById('catchupBadge').value = d.catchup_badge === false ? '0' : '1';
-                document.getElementById('sidebarOpacity').value = String(d.sidebar_opacity == null ? 0 : d.sidebar_opacity);
                 const m3uFile = d.m3u_file_path || '';
                 const dropDir = d.m3u_drop_dir || '';
                 if (dropDir) {

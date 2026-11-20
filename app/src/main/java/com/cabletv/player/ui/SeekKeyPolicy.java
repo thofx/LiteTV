@@ -35,11 +35,10 @@ final class SeekKeyPolicy {
      * the keys took them away from the list the viewer had just opened, which left the guide
      * impossible to navigate while rewinding.
      *
-     * <p>Full screen they always seek: LEFT while watching live rewinds from this moment rather
-     * than restarting the programme from its beginning.
+     * <p>全屏时只有底部 HUD 显示着才是快进快退；HUD 不在时左键打开频道列表、右键打开设置。
      */
-    static boolean appliesOnScreen(boolean listOpen) {
-        return !listOpen;
+    static boolean appliesOnScreen(boolean listOpen, boolean hudVisible) {
+        return !listOpen && hudVisible;
     }
 
     /**

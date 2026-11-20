@@ -251,24 +251,23 @@ public class ConfigWebServerTest {
     }
 
     @Test
-    public void displayPost_savesEpgToggleAndOpacity() throws Exception {
+    public void displayPost_savesEpgToggle() throws Exception {
         String[] res = request("POST", "/config/display",
                 "Content-Type: application/x-www-form-urlencoded\r\n",
-                "epg_display_enabled=0&sidebar_opacity=2");
+                "epg_display_enabled=0");
         assertEquals("200", res[0]);
         assertTrue(res[1].contains("\"success\":true"));
         assertTrue(!AppConfig.isEpgDisplayEnabled());
-        assertEquals(AppConfig.SIDEBAR_OPAQUE, AppConfig.getSidebarOpacity());
     }
 
+    /** 透明度设置已移除：旧页面仍提交 sidebar_opacity 时不能因此失败。 */
     @Test
-    public void displayPost_rejectsOutOfRangeOpacity() throws Exception {
-        AppConfig.setSidebarOpacity(AppConfig.SIDEBAR_TRANSLUCENT);
+    public void displayPost_ignoresRemovedOpacityField() throws Exception {
         String[] res = request("POST", "/config/display",
                 "Content-Type: application/x-www-form-urlencoded\r\n",
-                "sidebar_opacity=9");
-        assertTrue(res[1].contains("\"success\":false"));
-        assertEquals(AppConfig.SIDEBAR_TRANSLUCENT, AppConfig.getSidebarOpacity());
+                "epg_display_enabled=1&sidebar_opacity=9");
+        assertTrue(res[1].contains("\"success\":true"));
+        assertTrue(AppConfig.isEpgDisplayEnabled());
     }
 
     @Test

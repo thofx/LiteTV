@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 列表焦点行：白底，配深色文字（影院暗色焦点样式） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/cine_focus" />
+    <corners android:radius="12dp" />
+</shape>

@@ -23,7 +23,6 @@
     <string name="rebind">重新绑定</string>
     <string name="waiting_key">请按键…</string>
     <string name="no_playlist_configured">尚未配置播放列表。按 MENU 键打开设置，或通过浏览器访问本机端口 %1$d 进行配置。</string>
-    <string name="playback_buffering">缓冲中…</string>
     <string name="playback_reconnecting">播放失败，正在重连…（%1$d/%2$d）</string>
     <string name="playback_failed">无法播放 %1$s，按 OK 键选择其他频道。</string>
     <string name="playlist_load_failed">无法加载播放列表：%1$s</string>
@@ -51,11 +50,6 @@
     <string name="epg_display_enabled">已启用节目单显示</string>
     <string name="epg_display_disabled">已禁用节目单显示</string>
     <string name="server_address_format">地址：%1$s</string>
-    <string name="sidebar_opacity">频道列表背景</string>
-    <string name="sidebar_opacity_translucent">半透明（默认）</string>
-    <string name="sidebar_opacity_semi">半不透明</string>
-    <string name="sidebar_opacity_opaque">不透明</string>
-    <string name="sidebar_opacity_saved">频道列表背景已更新</string>
 
     <string name="save">保存</string>
     <string name="show_epg_in_channel_list">在频道列表显示节目单</string>
@@ -108,10 +102,7 @@
     <string name="source_switched">%1$s · 第 %2$d/%3$d 个源</string>
     <string name="source_only_one">该频道只有一个源</string>
     <string name="timeshift_position">播放位置 %1$s</string>
-    <string name="timeshift_behind_live">慢于直播 -%1$s</string>
     <string name="press_again_to_exit">再按一次返回键退出播放器</string>
-    <string name="playing_now">正在播放: %1$s</string>
-    <string name="live_indicator">● LIVE 直播</string>
     <string name="display_section">显示</string>
     <string name="catchup_badge">回放标记</string>
     <string name="catchup_badge_hint">回看时在画面角落显示一个小标记，提示当前不是直播。</string>
@@ -119,7 +110,6 @@
 
     <string name="exit_confirm_title">退出 LiteTV？</string>
     <string name="exit_confirm_message">确定要退出吗？</string>
-    <string name="exit_confirm">同意</string>
     <string name="exit_cancel">取消</string>
 
     <!-- 应用内自更新（从 GitHub Releases 检查，随发布提供 update.json） -->
@@ -165,4 +155,28 @@
     <string name="merge_same_name_channels">合并同名频道</string>
     <string name="merge_same_name_hint">当播放列表把同一频道按不同源重复列出时（订阅链接常见），合并为一个频道并依次尝试各个源。列表本身没有重复时无任何影响。</string>
     <string name="merge_same_name_saved">合并设置已保存（正在重新加载播放列表）</string>
+    <!-- 影院暗色重设计：HUD / 换台卡片 / 时钟 -->
+    <string name="hud_live">直播</string>
+    <string name="hud_paused">已暂停</string>
+    <string name="hud_catchup">回看中 · 慢于直播 %1$s</string>
+    <string name="hud_time_range">%1$s – %2$s · 还剩 %3$d 分钟</string>
+    <string name="hud_next">接下来  %1$s</string>
+    <string name="hint_key_ok">OK</string>
+    <string name="hint_key_lr">← →</string>
+    <string name="hint_key_back">返回</string>
+    <string name="hint_pause">暂停</string>
+    <string name="hint_resume">继续</string>
+    <string name="hint_seek">快退 / 快进</string>
+    <string name="hint_back_live">回到直播</string>
+    <string name="hint_hide">收起</string>
+    <string name="zap_source">源 %1$d/%2$d</string>
+    <string name="buffering_speed">缓冲中 · %1$s</string>
+    <string name="guide_title">节目单</string>
+    <string name="language_section">语言</string>
+    <string name="language_system">跟随系统</string>
+    <string name="language_zh">简体中文</string>
+    <string name="language_en">English</string>
+    <string name="exit_keep_watching">继续观看</string>
+    <string name="exit_leave">退出</string>
+    <string name="exit_resume_hint">下次打开会继续播放 %1$s</string>
 </resources>

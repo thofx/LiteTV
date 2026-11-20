@@ -3,7 +3,7 @@
     <color name="colorPrimary">#0D111A</color>
     <color name="colorPrimaryDark">#070A0F</color>
     <!-- Modern Electric Cyan as primary accent, matching Modern TV OS style -->
-    <color name="colorAccent">#00E5FF</color>
+    <color name="colorAccent">#E11D48</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
     <color name="overlay_dark">#D90D111A</color>
@@ -30,11 +30,19 @@
     <color name="bg_overlay_end">#800D111A</color>
 
     <!-- Modern Apple TV / Leanback Settings Panel -->
-    <color name="apple_panel_bg">#FF0D111A</color>
-    <color name="apple_row_focus">#2400E5FF</color>
-    <color name="apple_border">#1E293B</color>
-    <color name="apple_pill_pressed">#2600E5FF</color>
+    <color name="apple_panel_bg">#FA0E0E11</color>
     <color name="apple_section_title">#00E5FF</color>
-    <color name="apple_text_primary">#FFF8FAFC</color>
-    <color name="apple_text_secondary">#FF94A3B8</color>
+    <color name="apple_text_primary">#FFF5F5F7</color>
+    <color name="apple_text_secondary">#FFA1A1AA</color>
+    <!-- 影院暗色设计规范（Cinema dark） -->
+    <color name="cine_card">#D1121216</color>
+    <color name="cine_hairline">#1AFFFFFF</color>
+    <color name="cine_text_1">#F5F5F7</color>
+    <color name="cine_text_2">#A1A1AA</color>
+    <color name="cine_text_3">#8A8A93</color>
+    <color name="cine_accent">#E11D48</color>
+    <color name="cine_focus">#F5F5F7</color>
+    <color name="cine_on_focus">#0A0A0B</color>
+    <color name="cine_monogram_bg">#2A2A30</color>
+    <color name="cine_monogram_text">#E4E4E7</color>
 </resources>

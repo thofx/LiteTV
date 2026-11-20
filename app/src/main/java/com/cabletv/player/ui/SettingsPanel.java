@@ -89,7 +89,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
     private ToggleSwitchView mWebServerToggle;
     private TextView mWebServerAddress;
     private ToggleSwitchView mEpgDisplayToggle;
-    private RadioGroup mSidebarOpacityGroup;
+    private RadioGroup mLanguageGroup;
     private RadioGroup mEpgPreferenceGroup;
     private RadioGroup mVideoRenderModeGroup;
     private RadioGroup mVideoDecodeModeGroup;
@@ -139,7 +139,7 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         mWebServerToggle = findViewById(R.id.web_server_toggle);
         mWebServerAddress = findViewById(R.id.web_server_address);
         mEpgDisplayToggle = findViewById(R.id.epg_display_toggle);
-        mSidebarOpacityGroup = findViewById(R.id.sidebar_opacity_group);
+        mLanguageGroup = findViewById(R.id.language_group);
         mEpgPreferenceGroup = findViewById(R.id.epg_preference_group);
         mVideoRenderModeGroup = findViewById(R.id.video_render_mode_group);
         mVideoDecodeModeGroup = findViewById(R.id.video_decode_mode_group);
@@ -350,10 +350,13 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
             Toast.makeText(getContext(), isChecked ? R.string.epg_display_enabled
                     : R.string.epg_display_disabled, Toast.LENGTH_SHORT).show();
         });
-        mSidebarOpacityGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            AppConfig.setSidebarOpacity(opacityOf(checkedId));
-            Toast.makeText(getContext(), R.string.sidebar_opacity_saved, Toast.LENGTH_SHORT).show();
-            mHost.onConfigurationChanged();
+        mLanguageGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            String language = checkedId == R.id.language_zh ? AppConfig.LANGUAGE_ZH
+                    : checkedId == R.id.language_en ? AppConfig.LANGUAGE_EN : AppConfig.LANGUAGE_SYSTEM;
+            // 只在真的变了时写入：写入会触发界面重建
+            if (!language.equals(AppConfig.getLanguage())) {
+                AppConfig.setLanguage(language);
+            }
         });
         mEpgPreferenceGroup.setOnCheckedChangeListener((group, checkedId) -> {
             AppConfig.setEpgPreference(epgPreferenceOf(checkedId));
@@ -383,7 +386,9 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         mEpgDisplayToggle.setChecked(AppConfig.isEpgDisplayEnabled());
         // Checked before the listeners are attached, so restoring the saved value is not
         // mistaken for the viewer choosing it again.
-        mSidebarOpacityGroup.check(radioIdOf(AppConfig.getSidebarOpacity()));
+        String language = AppConfig.getLanguage();
+        mLanguageGroup.check(AppConfig.LANGUAGE_ZH.equals(language) ? R.id.language_zh
+                : AppConfig.LANGUAGE_EN.equals(language) ? R.id.language_en : R.id.language_system);
         mEpgPreferenceGroup.check(epgPreferenceRadioId(AppConfig.getEpgPreference()));
         mVideoRenderModeGroup.check(AppConfig.getVideoRenderMode() == AppConfig.RENDER_TEXTURE
                 ? R.id.video_render_texture : R.id.video_render_surface);
@@ -452,27 +457,6 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         return R.id.epg_preference_auto;
     }
 
-    private static int opacityOf(int checkedId) {
-        if (checkedId == R.id.sidebar_opacity_opaque) {
-            return AppConfig.SIDEBAR_OPAQUE;
-        }
-        if (checkedId == R.id.sidebar_opacity_semi) {
-            return AppConfig.SIDEBAR_SEMI_OPAQUE;
-        }
-        return AppConfig.SIDEBAR_TRANSLUCENT;
-    }
-
-    private static int radioIdOf(int opacity) {
-        switch (opacity) {
-            case AppConfig.SIDEBAR_OPAQUE:
-                return R.id.sidebar_opacity_opaque;
-            case AppConfig.SIDEBAR_SEMI_OPAQUE:
-                return R.id.sidebar_opacity_semi;
-            default:
-                return R.id.sidebar_opacity_translucent;
-        }
-    }
-
     /**
      * The panel takes two thirds of the screen, so the picture stays visible on the left.
      *
@@ -502,6 +486,11 @@ public class SettingsPanel extends android.widget.FrameLayout implements UpdateM
         fadeIn();
         // The remote has to land somewhere: the first control in the panel.
         post(() -> {
+            // 每次打开都从顶部开始（界面重建后 ScrollView 会恢复旧的滚动位置）
+            View scroll = findViewById(R.id.settings_scroll);
+            if (scroll != null) {
+                scroll.scrollTo(0, 0);
+            }
             View first = findFirstFocusable(this);
             if (first != null) {
                 first.requestFocus();

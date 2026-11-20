@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 可聚焦控件文字：焦点时白底深字，否则浅色字 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#0A0A0B" android:state_focused="true" />
+    <item android:color="#F5F5F7" />
+</selector>

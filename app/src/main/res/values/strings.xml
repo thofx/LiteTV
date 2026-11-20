@@ -23,7 +23,6 @@
     <string name="rebind">Rebind</string>
     <string name="waiting_key">Waiting for key...</string>
     <string name="no_playlist_configured">No playlist configured. Press MENU to open settings, or configure it from a browser at port %1$d of this device.</string>
-    <string name="playback_buffering">Buffering…</string>
     <string name="playback_reconnecting">Playback failed, reconnecting… (%1$d/%2$d)</string>
     <string name="playback_failed">Cannot play %1$s. Press OK to choose another channel.</string>
     <string name="playlist_load_failed">Cannot load the playlist: %1$s</string>
@@ -51,11 +50,6 @@
     <string name="epg_display_enabled">EPG display enabled</string>
     <string name="epg_display_disabled">EPG display disabled</string>
     <string name="server_address_format">Address: %1$s</string>
-    <string name="sidebar_opacity">Channel List Background</string>
-    <string name="sidebar_opacity_translucent">Translucent (default)</string>
-    <string name="sidebar_opacity_semi">Semi-opaque</string>
-    <string name="sidebar_opacity_opaque">Opaque</string>
-    <string name="sidebar_opacity_saved">Channel list background updated</string>
 
     <string name="save">Save</string>
     <string name="show_epg_in_channel_list">Show EPG in channel list</string>
@@ -108,10 +102,7 @@
     <string name="source_switched">%1$s · source %2$d of %3$d</string>
     <string name="source_only_one">This channel has a single source</string>
     <string name="timeshift_position">Position %1$s</string>
-    <string name="timeshift_behind_live">Behind live -%1$s</string>
     <string name="press_again_to_exit">Press BACK again to exit</string>
-    <string name="playing_now">Playing: %1$s</string>
-    <string name="live_indicator">● LIVE</string>
     <string name="display_section">Display</string>
     <string name="catchup_badge">Replay badge</string>
     <string name="catchup_badge_hint">Shows a small replay mark in the corner while you are watching a replay.</string>
@@ -119,7 +110,6 @@
 
     <string name="exit_confirm_title">Exit LiteTV?</string>
     <string name="exit_confirm_message">Are you sure you want to exit?</string>
-    <string name="exit_confirm">Confirm</string>
     <string name="exit_cancel">Cancel</string>
 
     <!-- Self-update (checks GitHub Releases; the manifests are published per release) -->
@@ -165,4 +155,28 @@
     <string name="merge_same_name_channels">Merge channels that share a name</string>
     <string name="merge_same_name_hint">When a playlist lists one channel once per source (subscription links often do), keep it as a single channel whose sources are tried in order. Playlists without repeated names are unaffected.</string>
     <string name="merge_same_name_saved">Channel merging saved (the playlist reloads now)</string>
+    <!-- 影院暗色重设计：HUD / 换台卡片 / 时钟 -->
+    <string name="hud_live">LIVE</string>
+    <string name="hud_paused">Paused</string>
+    <string name="hud_catchup">Replay · %1$s behind</string>
+    <string name="hud_time_range">%1$s – %2$s · %3$d min left</string>
+    <string name="hud_next">Up next  %1$s</string>
+    <string name="hint_key_ok">OK</string>
+    <string name="hint_key_lr">← →</string>
+    <string name="hint_key_back">BACK</string>
+    <string name="hint_pause">Pause</string>
+    <string name="hint_resume">Resume</string>
+    <string name="hint_seek">Rewind / Forward</string>
+    <string name="hint_back_live">Back to live</string>
+    <string name="hint_hide">Hide</string>
+    <string name="zap_source">Source %1$d/%2$d</string>
+    <string name="buffering_speed">Buffering · %1$s</string>
+    <string name="guide_title">Guide</string>
+    <string name="language_section">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_zh">简体中文</string>
+    <string name="language_en">English</string>
+    <string name="exit_keep_watching">Keep watching</string>
+    <string name="exit_leave">Exit</string>
+    <string name="exit_resume_hint">Next time LiteTV opens on %1$s</string>
 </resources>

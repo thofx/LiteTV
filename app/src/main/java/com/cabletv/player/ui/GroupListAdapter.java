@@ -77,7 +77,7 @@ public class GroupListAdapter extends RecyclerView.Adapter<GroupListAdapter.Grou
         RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
                 RecyclerView.LayoutParams.MATCH_PARENT,
                 dp2px(ChannelListComponent.GROUP_ROW_HEIGHT_DP));
-        lp.setMargins(dp2px(6), dp2px(2), dp2px(6), dp2px(2));
+        lp.setMargins(dp2px(12), dp2px(2), dp2px(12), dp2px(2));
         view.setLayoutParams(lp);
         view.setPadding(dp2px(12), 0, dp2px(8), 0);
         return new GroupViewHolder(view);
@@ -137,28 +137,23 @@ public class GroupListAdapter extends RecyclerView.Adapter<GroupListAdapter.Grou
         void setGroup(String label, int channelCount, boolean isSelected, boolean focused) {
             nameView.setText(label);
             countView.setText(String.valueOf(channelCount));
+            nameView.setTextSize(15);
+            countView.setTextSize(12);
+            countView.setBackground(null);
             int nameColor;
             int countColor;
             if (isSelected && focused) {
-                nameColor = 0xFF00E5FF;
-                countColor = 0xFF00E5FF;
-                nameView.setTextSize(15);
-                countView.setTextSize(11);
-                countView.setBackgroundResource(R.drawable.bg_group_count_badge_focused);
-                container.setBackgroundResource(R.drawable.channel_item_selected_bg);
+                // 焦点行：白底深字
+                nameColor = 0xFF0A0A0B;
+                countColor = 0xFF52525B;
+                container.setBackgroundResource(R.drawable.bg_row_focus);
             } else if (isSelected) {
-                nameColor = 0xFF66E5FF;
-                countColor = 0xFF66E5FF;
-                nameView.setTextSize(15);
-                countView.setTextSize(11);
-                countView.setBackgroundResource(R.drawable.bg_group_count_badge);
-                container.setBackgroundResource(R.drawable.channel_item_selected_dim_bg);
+                nameColor = 0xFFF5F5F7;
+                countColor = 0xFFA1A1AA;
+                container.setBackgroundResource(R.drawable.bg_row_selected);
             } else {
-                nameColor = 0xFFE2E8F0;
-                countColor = 0xFF94A3B8;
-                nameView.setTextSize(15);
-                countView.setTextSize(11);
-                countView.setBackgroundResource(R.drawable.bg_group_count_badge);
+                nameColor = 0xFFC7C7CC;
+                countColor = 0xFF8A8A93;
                 container.setBackgroundColor(0x00000000);
             }
             nameView.setTextColor(nameColor);

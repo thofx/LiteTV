@@ -20,7 +20,6 @@ enum WebSetting {
     EPG_PREFERENCE("epg_preference", "app_epg_preference"),
     MERGE_SAME_NAME_CHANNELS("merge_same_name_channels", "app_merge_same_name_channels"),
     EPG_DISPLAY("epg_display_enabled", "app_epg_display_enabled"),
-    SIDEBAR_OPACITY("sidebar_opacity", "app_sidebar_opacity"),
     CATCHUP_BADGE("catchup_badge", "app_catchup_badge"),
     VIDEO_RENDER_MODE("video_render_mode", "app_video_render_mode"),
     VIDEO_DECODE_MODE("video_decode_mode", "app_video_decode_mode"),

@@ -56,11 +56,6 @@ public class AppConfig {
         return keys.contains(EPG_URL_KEY) || keys.contains(EPG_PREFERENCE_KEY);
     }
 
-    /** Whether a change to these keys affects sidebar and HUD opacity. */
-    public static boolean affectsOpacity(java.util.Set<String> keys) {
-        return keys.contains(SIDEBAR_OPACITY_KEY);
-    }
-
     private static <T> T read(String key, T defaultValue) {
         return sStore.get(key, defaultValue);
     }
@@ -96,7 +91,6 @@ public class AppConfig {
     private static final String EPG_URL_KEY = "app_epg_url";
     private static final String WEB_SERVER_ENABLED_KEY = "app_web_server_enabled";
     private static final String WEB_SERVER_PORT_KEY = "app_web_server_port";
-    public static final String SIDEBAR_OPACITY_KEY = "app_sidebar_opacity";
     private static final String M3U_FILE_PATH_KEY = "app_m3u_file_path";
     private static final String EPG_DISPLAY_KEY = "app_epg_display_enabled";
     private static final String EPG_CACHE_VALIDITY_HOURS_KEY = "app_epg_cache_hours";
@@ -263,18 +257,20 @@ public class AppConfig {
         write(WEB_SERVER_PORT_KEY, port);
     }
 
-    /** How solid the channel-list panels are painted: 0 translucent, 1 semi-opaque, 2 opaque. */
-    public static final int SIDEBAR_TRANSLUCENT = 0;
-    public static final int SIDEBAR_SEMI_OPAQUE = 1;
-    public static final int SIDEBAR_OPAQUE = 2;
+    /** 界面语言的存储键与取值。 */
+    public static final String LANGUAGE_KEY = "app_language";
+    public static final String LANGUAGE_SYSTEM = "";
+    public static final String LANGUAGE_ZH = "zh";
+    public static final String LANGUAGE_EN = "en";
 
-    public static int getSidebarOpacity() {
-        int level = read(SIDEBAR_OPACITY_KEY, SIDEBAR_TRANSLUCENT);
-        return level >= SIDEBAR_TRANSLUCENT && level <= SIDEBAR_OPAQUE ? level : SIDEBAR_TRANSLUCENT;
+    /** @return {@link #LANGUAGE_ZH}、{@link #LANGUAGE_EN}，其他（含未设置）一律 {@link #LANGUAGE_SYSTEM} */
+    public static String getLanguage() {
+        String value = read(LANGUAGE_KEY, LANGUAGE_SYSTEM);
+        return LANGUAGE_ZH.equals(value) || LANGUAGE_EN.equals(value) ? value : LANGUAGE_SYSTEM;
     }
 
-    public static void setSidebarOpacity(int level) {
-        write(SIDEBAR_OPACITY_KEY, level);
+    public static void setLanguage(String language) {
+        write(LANGUAGE_KEY, language == null ? LANGUAGE_SYSTEM : language);
     }
 
     // M3U File path (for uploaded files)

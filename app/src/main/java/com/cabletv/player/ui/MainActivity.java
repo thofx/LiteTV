@@ -35,8 +35,6 @@ public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
     /** The request code the settings panel uses for the system document picker. */
     private static final int REQUEST_PICK_M3U_FILE = 1001;
-    /** Left inset the playback strip needs while the replay badge is on screen. */
-    private static final int BADGE_INSET_DP = 52;
 
     private VideoView mVideoView;
     private ChannelRepository mChannelRepository;
@@ -48,8 +46,10 @@ public class MainActivity extends Activity {
     private TimeShiftBarComponent mTimeShiftBar;
     /** The settings, as a panel that slides in over the picture. */
     private SettingsPanel mSettingsPanel;
-    /** The corner mark that says "this is a replay, not live TV". */
-    private android.widget.ImageView mCatchupBadge;
+    /** 右上角时钟 + 左上角「回看中」标签。 */
+    private CornerOverlay mCorner;
+    /** 暂停、换台卡片、缓冲网速三块浮层状态。 */
+    private PlaybackOverlayController mOverlay;
     private GestureDetector mGestureDetector;
 
     // Tap and double-tap bookkeeping for the touch handler above.
@@ -85,6 +85,8 @@ public class MainActivity extends Activity {
     /** Long enough to merge a page save, short enough to feel immediate. */
     private static final long SETTINGS_DEBOUNCE_MS = 80;
     private static final long CATCHUP_SEEK_STEP_MS = SeekKeyPolicy.STEP_MS;
+    /** 回看的目标点离直播不到这么远时，直接回到直播（播放点最多只能到「此刻 − 10 秒」）。 */
+    private static final long CATCHUP_LIVE_SNAP_MS = 15_000L;
     /** How far to rewind from "now" when live LEFT enters 回看 without EPG data. */
     private static final long CATCHUP_REWIND_MS = 2 * 60 * 1000L;
     /**
@@ -101,7 +103,6 @@ public class MainActivity extends Activity {
     private static final long NO_GUIDE_LOOKBACK_MS = 2 * 60 * 60 * 1000L;
     /** How far past "now" a still-airing programme's window may extend before the server catches up. */
     private static final long CATCHUP_LIVE_TAIL_MS = 8 * 60 * 60 * 1000L;
-    private final Runnable mCatchupSeekHideRunnable = this::hideCatchupSeekIndicator;
 
     /** How long the digits typed on the remote stay on screen before they tune a channel. */
     private static final long NUMBER_INPUT_TIMEOUT_MS = 2_000;
@@ -141,6 +142,12 @@ public class MainActivity extends Activity {
     /** Fires once if the key is still down: that is a hold, so the seek accelerates. */
     private final Runnable mSeekLongPressRunnable = this::startSeekAcceleration;
     private boolean mOkLongPressFired = false;
+
+    @Override
+    protected void attachBaseContext(android.content.Context newBase) {
+        // 应用内语言设置（设置面板 → 语言）
+        super.attachBaseContext(LocaleHelper.wrap(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,26 +206,21 @@ public class MainActivity extends Activity {
         });
         rootView.addView(mTimeShiftBar, mTimeShiftBar.createBottomLayoutParams());
         if (mEpgManager != null) {
-            mEpgManager.addOnEpgUpdatedListener(() -> runOnUiThread(() -> refreshTimeShiftBar(false)));
+            mEpgManager.addOnEpgUpdatedListener(() -> runOnUiThread(() -> {
+                refreshTimeShiftBar(false);
+                // 节目单晚于换台到达时，补上卡片里的节目信息
+                Channel current = mChannelRepository.getChannel(mCurrentChannelIndex);
+                if (mOverlay != null && current != null) {
+                    mOverlay.refreshZapCard(mCurrentChannelIndex + 1, current, mCurrentUrlIndex + 1);
+                }
+            }));
         }
 
-        // The replay badge: a corner mark, so a paused viewer coming back to the television can
-        // tell a replay from live TV at a glance.
-        mCatchupBadge = new android.widget.ImageView(this);
-        mCatchupBadge.setImageResource(R.drawable.ic_replay_badge);
-        // The disc keeps the mark readable on a bright picture; on dark scenes it is invisible.
-        mCatchupBadge.setBackgroundResource(R.drawable.replay_badge_bg);
-        int badgePad = dp2px(2);
-        mCatchupBadge.setPadding(badgePad, badgePad, badgePad, badgePad);
-        mCatchupBadge.setVisibility(View.GONE);
-        FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(dp2px(22), dp2px(22));
-        badgeLp.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.START;
-        badgeLp.leftMargin = dp2px(18);
-        badgeLp.setMarginStart(dp2px(18));
-        // In the bottom-left corner of the picture, inside the playback strip: the strip makes
-        // room for it by indenting its text, so nothing is covered.
-        badgeLp.bottomMargin = dp2px(10);
-        rootView.addView(mCatchupBadge, badgeLp);
+        // 换台卡片：左上角，几秒后自动消失
+        ZapCardView zapCard = new ZapCardView(this);
+        rootView.addView(zapCard, zapCard.createLayoutParams());
+        mOverlay = new PlaybackOverlayController(this, mVideoView, mTimeShiftBar, zapCard,
+                mPlaybackStatusView, mEpgManager);
 
         // The settings slide in from the right over the picture, which keeps playing behind them.
         mSettingsPanel = new SettingsPanel(this, new SettingsPanel.Host() {
@@ -243,6 +245,27 @@ public class MainActivity extends Activity {
             }
         });
         rootView.addView(mSettingsPanel, mSettingsPanel.createPanelLayoutParams());
+
+        // 角落信息放在设置面板之上，打开设置时时钟依然可见
+        mCorner = new CornerOverlay(this, new CornerOverlay.Host() {
+            @Override
+            public boolean wantsClock() {
+                return isHudVisible() || mChannelListVisible || mOverlay.isZapCardShowing()
+                        || (mSettingsPanel != null && mSettingsPanel.isPanelVisible());
+            }
+
+            @Override
+            public long behindLiveMs() {
+                // HUD 显示时它自己的状态胶囊已经说明了，这里不重复
+                if (!mCatchup.active || isHudVisible() || mChannelListVisible
+                        || !AppConfig.isCatchupBadgeEnabled()) {
+                    return -1;
+                }
+                return Math.max(0, System.currentTimeMillis() - currentPlayheadMs());
+            }
+        });
+        rootView.addView(mCorner, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         // Phone/touch: tap video to show controls, double-tap to cycle sources, long-press
         // to replay the current programme, vertical fling to change channel, horizontal
@@ -290,7 +313,7 @@ public class MainActivity extends Activity {
 
         // Digits typed on the remote, shown while the user is still typing
         mChannelNumberView = new ChannelNumberView(this);
-        rootView.addView(mChannelNumberView, mChannelNumberView.createTopEndLayoutParams());
+        rootView.addView(mChannelNumberView, mChannelNumberView.createTopStartLayoutParams());
 
         // Surface playback failures and reconnect automatically instead of showing a black screen
         mVideoView.addOnStateChangeListener(new VideoView.SimpleOnStateChangeListener() {
@@ -545,6 +568,10 @@ public class MainActivity extends Activity {
      */
     private void handleVideoFling(boolean horizontal, boolean positiveX, boolean upwardY) {
         if (horizontal) {
+            if (seekKeysApply()) {
+                applySeekOffset(positiveX ? CATCHUP_SEEK_STEP_MS : -CATCHUP_SEEK_STEP_MS);
+                return;
+            }
             if (positiveX) {
                 handleFocusRight();
             } else {
@@ -694,7 +721,7 @@ public class MainActivity extends Activity {
                     }
                 }
                 mTimeShiftBar.setPlaybackPosition(playhead);
-            } else if (channel != null) {
+            } else if (channel != null && !mOverlay.isPaused()) {
                 EpgManager.Program current = mEpgManager.getCurrentProgram(channel);
                 if (current != null && (now >= mTimeShiftBar.getWindowEnd() || now < mTimeShiftBar.getWindowStart())) {
                     String nextTitle = mEpgManager.getNextProgramInfo(channel);
@@ -755,16 +782,11 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * Shows the replay badge exactly while a replay is running and the viewer has not switched
-     * the mark off.
-     */
-    private void updateCatchupBadge() {
-        if (mCatchupBadge == null) {
-            return;
+    /** 刷新角落信息（时钟、「回看中」标签），在播放状态变化后立即生效。 */
+    private void refreshCornerOverlay() {
+        if (mCorner != null) {
+            mCorner.refresh();
         }
-        boolean show = mCatchup.active && AppConfig.isCatchupBadgeEnabled();
-        mCatchupBadge.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -774,7 +796,7 @@ public class MainActivity extends Activity {
      *                  video or presses a key, so it never sits over TV playback uninvited.
      */
     private void refreshTimeShiftBar(boolean forceShow) {
-        updateCatchupBadge();
+        refreshCornerOverlay();
         if (mTimeShiftBar == null) {
             return;
         }
@@ -786,6 +808,7 @@ public class MainActivity extends Activity {
         long now = System.currentTimeMillis();
         mTimeShiftBar.setChannelInfo(channel.name, mCurrentChannelIndex + 1,
                 mCurrentUrlIndex + 1, channel.urlCount(), channel.logo);
+        mTimeShiftBar.setCanSeek(channel.hasCatchup());
 
         if (mCatchup.active && mCatchup.program != null) {
             EpgManager.Program prog = mCatchup.program;
@@ -796,7 +819,9 @@ public class MainActivity extends Activity {
             EpgManager.Program nextProg = getProgramAfter(channel, prog.endTime);
             String nextTitle = nextProg != null ? nextProg.title : "";
 
-            mTimeShiftBar.setProgramInfo(prog.title, nextTitle);
+            // 没有节目单时回看用的是临时窗口，不能当成真实节目显示时段和剩余时间
+            boolean fromGuide = programAt(channel, playhead) != null;
+            mTimeShiftBar.setProgramInfo(fromGuide ? prog.title : null, nextTitle);
             mTimeShiftBar.setBackToLiveVisible(true);
             mTimeShiftBar.setLiveMode(false, now);
             mTimeShiftBar.setWindow(start, end, playhead);
@@ -819,7 +844,7 @@ public class MainActivity extends Activity {
         } else {
             long start = now - TIMESHIFT_NO_EPG_WINDOW_MS;
             long end = now;
-            mTimeShiftBar.setProgramInfo(getString(R.string.no_epg_data), "");
+            mTimeShiftBar.setProgramInfo(null, "");
             mTimeShiftBar.setBackToLiveVisible(false);
             mTimeShiftBar.setLiveMode(true, now);
             mTimeShiftBar.setWindow(start, end, now);
@@ -914,7 +939,7 @@ public class MainActivity extends Activity {
      */
     private boolean seekKeysApply() {
         // The open list owns the horizontal keys; full screen they belong to the playhead.
-        return SeekKeyPolicy.appliesOnScreen(mChannelListVisible);
+        return SeekKeyPolicy.appliesOnScreen(mChannelListVisible, isHudVisible());
     }
 
     /**
@@ -997,7 +1022,8 @@ public class MainActivity extends Activity {
 
     /** Starts the accelerated seek; each held press moves on to the next rate. */
     private void startSeekAcceleration() {
-        if (mSeekLongPressFired) {
+        if (mSeekLongPressFired || !canSeekNow()) {
+            // 不支持回看的频道不进入加速；松手时 applySeekOffset 会给出提示
             return;
         }
         mSeekLongPressFired = true;
@@ -1046,7 +1072,8 @@ public class MainActivity extends Activity {
         if (channel == null || mTimeShiftBar == null) {
             return;
         }
-        long base = mCatchup.active ? currentPlayheadMs() : System.currentTimeMillis();
+        long base = mCatchup.active ? currentPlayheadMs()
+                : (mOverlay.isPaused() ? mOverlay.pausedAtMs() : System.currentTimeMillis());
         long targetMs = base + deltaMs;
         long winStart = mTimeShiftBar.getWindowStart();
         long winEnd = mTimeShiftBar.getWindowEnd();
@@ -1076,16 +1103,41 @@ public class MainActivity extends Activity {
         if (deltaMs == 0) {
             return;
         }
+        boolean wasPaused = mOverlay.isPaused();
         if (mCatchup.active) {
+            mOverlay.clearPause();
             seekCatchup(deltaMs);
+            if (wasPaused) {
+                mVideoView.start();
+            }
             return;
         }
         Channel channel = mChannelRepository.getChannel(mCurrentChannelIndex);
-        if (channel == null || !channel.hasCatchup()) {
+        if (channel == null) {
             return;
         }
-        long now = System.currentTimeMillis();
-        handleTimeShiftSeek(now + deltaMs);
+        if (!channel.hasCatchup()) {
+            android.widget.Toast.makeText(this, R.string.catchup_not_available,
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // 暂停中回退以暂停的那一刻为基准，而不是现在
+        long base = wasPaused ? mOverlay.pausedAtMs() : System.currentTimeMillis();
+        mOverlay.clearPause();
+        handleTimeShiftSeek(base + deltaMs);
+        if (wasPaused && !mCatchup.active) {
+            // 落点仍在直播边缘：直接回到直播
+            playChannel(mCurrentChannelIndex);
+        }
+    }
+
+    /** 当前是否能快进快退：回看中，或频道支持回看。 */
+    private boolean canSeekNow() {
+        if (mCatchup.active) {
+            return true;
+        }
+        Channel channel = mChannelRepository.getChannel(mCurrentChannelIndex);
+        return channel != null && channel.hasCatchup();
     }
 
     /**
@@ -1125,18 +1177,8 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Full-screen playback: long-press OK replays the programme currently on air.
-        Channel current = mChannelRepository.getChannel(mCurrentChannelIndex);
-        if (current == null) {
-            return;
-        }
-        EpgManager.Program program = mEpgManager.getCurrentProgram(current);
-        if (program == null) {
-            android.widget.Toast.makeText(this, R.string.catchup_no_program,
-                    android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        playCatchup(current, program);
+        // 全屏：长按 OK 只呼出 HUD，不暂停
+        refreshTimeShiftBar(true);
     }
 
     private void toggleFavorite(Channel target) {
@@ -1270,6 +1312,11 @@ public class MainActivity extends Activity {
             return;
         }
         long now = System.currentTimeMillis();
+        if (targetMs >= now - CATCHUP_LIVE_SNAP_MS) {
+            // 快进（或拖动）到直播边缘：直接回到直播，而不是卡在慢于直播 10 秒的地方
+            exitCatchupToLive();
+            return;
+        }
         long minPlayhead = mCatchup.windowStartMs > 0 ? mCatchup.windowStartMs
                 : mCatchup.program.startTime;
         long maxPlayhead = now - CATCHUP_SEEK_STEP_MS;
@@ -1297,20 +1344,6 @@ public class MainActivity extends Activity {
             mVideoView.switchUrl(url, mCatchup.channel.headers);
             refreshTimeShiftBar();
         });
-        showCatchupSeekIndicator((mCatchup.playheadMs - mCatchup.program.startTime) / 1000);
-    }
-
-    private void showCatchupSeekIndicator(long offsetSec) {
-        String label = (offsetSec >= 0 ? "+" : "-") + Math.abs(offsetSec) + "s";
-        mChannelNumberView.showDigits(label, mCatchup.channel.name);
-        mMainHandler.removeCallbacks(mCatchupSeekHideRunnable);
-        mMainHandler.postDelayed(mCatchupSeekHideRunnable, 1500);
-    }
-
-    private void hideCatchupSeekIndicator() {
-        if (!isNumberInputActive()) {
-            mChannelNumberView.hide();
-        }
     }
 
     /** Leaves catchup and returns to the live stream of the channel being watched. */
@@ -1346,6 +1379,8 @@ public class MainActivity extends Activity {
             mNumberInput.setLength(0);
         }
         mNumberInput.append(digit);
+        // 数字选台卡片与换台卡片同在左上角
+        mOverlay.hideZapCard();
         Channel target = channelForNumber(numberOf(mNumberInput));
         mChannelNumberView.showDigits(mNumberInput.toString(), target != null ? target.name : null);
         mMainHandler.removeCallbacks(mNumberCommitRunnable);
@@ -1432,16 +1467,8 @@ public class MainActivity extends Activity {
     private void moveSelectionInList(boolean down) {
         switch (mChannelListComponent.getFocusPanel()) {
             case PROGRAMS:
-                if (!mChannelListComponent.moveProgramSelection(down)) {
-                    // The cursor ran off an end of the day: page the guide that way, which is how
-                    // the viewer reaches earlier days now that LEFT belongs to the column layout.
-                    if (mChannelListComponent.moveProgramDay(down ? 1 : -1)) {
-                        Log.d(TAG, "moveSelectionInList: paged the guide to another day");
-                        // Land where the movement was heading: stepping up past the top of a day
-                        // continues at the bottom of the previous one, and the other way round.
-                        mChannelListComponent.selectProgramEdge(down);
-                    }
-                }
+                // 节目单是连续列表（跨天带日期标题），上下键一直走下去即可
+                mChannelListComponent.moveProgramSelection(down);
                 break;
             case GROUPS:
                 mChannelListComponent.moveGroupSelection(down);
@@ -1489,19 +1516,14 @@ public class MainActivity extends Activity {
     /** Left steps back through the three columns: programmes, channels, groups. */
     private void handleFocusLeft() {
         if (!mChannelListVisible || mChannelListComponent == null) {
-            // Full-screen LEFT moves the playhead back from where it is now; while watching live
-            // that also enters 回看. It is handled by the seek path, so this is only a fallback.
-            applySeekOffset(-CATCHUP_SEEK_STEP_MS);
+            // HUD 不在时（HUD 在时由 seek 路径处理）：左键打开频道列表
+            mChannelListVisible = true;
+            showChannelList();
             return;
         }
-        // Inside the programme column, LEFT steps back a day. When there is no earlier day (most
-        // feeds carry today alone) it folds back to the channels instead of doing nothing, so the
-        // key is never a dead end; the ends of the list page the days as well (moveSelectionInList).
+        // 节目单栏：左键回到频道栏
         if (mChannelListComponent.getFocusPanel() == ChannelListComponent.FocusPanel.PROGRAMS) {
-            if (!mChannelListComponent.moveProgramDay(-1)) {
-                Log.d(TAG, "handleFocusLeft: no earlier day, folding back to channels");
-                mChannelListComponent.moveFocusToChannels();
-            }
+            mChannelListComponent.moveFocusToChannels();
             return;
         }
         Log.d(TAG, "handleFocusLeft: Moving focus to groups");
@@ -1511,9 +1533,11 @@ public class MainActivity extends Activity {
     /** Right steps forward through the three columns: groups, channels, programmes. */
     private void handleFocusRight() {
         if (!mChannelListVisible || mChannelListComponent == null) {
-            // Full-screen RIGHT moves the playhead forward; nothing happens while watching live,
-            // where it is already at the live edge.
-            applySeekOffset(CATCHUP_SEEK_STEP_MS);
+            // HUD 不在时：右键打开设置
+            if (mSettingsPanel != null) {
+                mOverlay.hideZapCard();
+                mSettingsPanel.showPanel();
+            }
             return;
         }
         switch (mChannelListComponent.getFocusPanel()) {
@@ -1522,8 +1546,7 @@ public class MainActivity extends Activity {
                 mChannelListComponent.moveFocusToChannels();
                 break;
             case PROGRAMS:
-                // Inside the programme column, RIGHT pages the guide one day forward.
-                mChannelListComponent.moveProgramDay(1);
+                // 节目单已是最右一栏
                 break;
             default:
                 Log.d(TAG, "handleFocusRight: Moving focus to programs");
@@ -1564,10 +1587,8 @@ public class MainActivity extends Activity {
             mChannelListVisible = false;
             Log.d(TAG, "handleOk - hiding list");
         } else {
-            // Show channel list for selection
-            mChannelListVisible = true;
-            showChannelList();
-            Log.d(TAG, "handleOk - showing list, mChannelListVisible now=" + mChannelListVisible);
+            // 全屏：OK 暂停 / 继续
+            togglePause();
         }
     }
 
@@ -1597,6 +1618,7 @@ public class MainActivity extends Activity {
     }
 
     private void showChannelList() {
+        mOverlay.hideZapCard();
         if (mChannelListComponent == null) {
             mChannelListComponent = new ChannelListComponent(this, mNavigator);
             mChannelListComponent.setEpgManager(mEpgManager);
@@ -1644,8 +1666,6 @@ public class MainActivity extends Activity {
         }
         // Always refresh when opening menu to show current channel and program
         if (mChannelListComponent != null) {
-            // The viewer may have changed the opacity in the settings since the menu was built
-            mChannelListComponent.applyOpacity();
             mChannelListComponent.setCurrentChannel(mCurrentChannelIndex);
             // Reopen where the viewer left off: the group they last browsed while it still holds the
             // playing channel (so the highlight is there to see), otherwise the group the channel
@@ -1712,8 +1732,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    private long mLastBackPressTime = 0;
-    private static final long BACK_DOUBLE_CLICK_INTERVAL_MS = 600L;
 
     private void handleBack() {
         if (mSettingsPanel != null && mSettingsPanel.isPanelVisible()) {
@@ -1733,32 +1751,47 @@ public class MainActivity extends Activity {
         } else if (mChannelListVisible) {
             hideChannelList();
             mChannelListVisible = false;
+        } else if (mCatchup.active || mOverlay.isPaused()) {
+            // 回看中或暂停中：返回键一律先回到直播
+            backToLive();
+        } else if (isHudVisible()) {
+            mTimeShiftBar.hideSmooth();
         } else {
-            long now = System.currentTimeMillis();
-            boolean isInfoBarVisible = (mTimeShiftBar != null && mTimeShiftBar.getVisibility() == View.VISIBLE);
-
-            if (now - mLastBackPressTime < BACK_DOUBLE_CLICK_INTERVAL_MS) {
-                // Double-click BACK: pop up exit confirmation dialog
-                mLastBackPressTime = 0;
-                if (isInfoBarVisible) {
-                    mTimeShiftBar.hide();
-                }
-                showExitConfirmDialog();
-            } else {
-                mLastBackPressTime = now;
-                if (isInfoBarVisible) {
-                    // In info bar visible state: return to live if in catchup, or hide info bar if live
-                    if (mCatchup.active) {
-                        exitCatchupToLive();
-                    } else {
-                        mTimeShiftBar.hideSmooth();
-                    }
-                } else {
-                    // Single press when info bar is hidden: show bottom HUD (without toast)
-                    refreshTimeShiftBar(true);
-                }
-            }
+            showExitConfirmDialog();
         }
+    }
+
+    /** 回到直播：退出回看，或从暂停恢复到最新画面。 */
+    private void backToLive() {
+        mOverlay.clearPause();
+        if (mCatchup.active) {
+            exitCatchupToLive();
+        } else {
+            playChannel(mCurrentChannelIndex);
+        }
+    }
+
+    private boolean isHudVisible() {
+        return mTimeShiftBar != null && mTimeShiftBar.getVisibility() == View.VISIBLE;
+    }
+
+    /** 全屏 OK：暂停并显示 HUD；再按继续。 */
+    private void togglePause() {
+        if (mOverlay.isPaused()) {
+            mOverlay.clearPause();
+            if (mCatchup.active) {
+                mVideoView.resume();
+                refreshTimeShiftBar(true);
+            } else {
+                // 直播暂停后恢复：直接回到最新画面（暂停期间的直播流无法续上）
+                playChannel(mCurrentChannelIndex);
+            }
+            return;
+        }
+        long pausedAt = mCatchup.active ? currentPlayheadMs() : System.currentTimeMillis();
+        // 先把 HUD 拿出来；还在缓冲或出错时不暂停，只显示信息栏
+        refreshTimeShiftBar(true);
+        mOverlay.pause(pausedAt);
     }
 
     /** Asks before leaving the player, using a modern obsidian styled dialog. */
@@ -1772,16 +1805,22 @@ public class MainActivity extends Activity {
         }
         android.widget.Button btnCancel = dialog.findViewById(R.id.btn_cancel);
         android.widget.Button btnConfirm = dialog.findViewById(R.id.btn_confirm);
-
-        if (btnCancel != null) {
-            btnCancel.setOnClickListener(v -> dialog.dismiss());
+        android.widget.TextView message = dialog.findViewById(R.id.dialog_message);
+        Channel current = mChannelRepository.getChannel(mCurrentChannelIndex);
+        if (message != null && current != null) {
+            // 告诉用户下次打开会接着播哪个台，退出就不那么「怕丢」
+            message.setText(getString(R.string.exit_resume_hint, current.name));
         }
         if (btnConfirm != null) {
             btnConfirm.setOnClickListener(v -> {
                 dialog.dismiss();
                 finish();
             });
-            btnConfirm.requestFocus();
+        }
+        if (btnCancel != null) {
+            btnCancel.setOnClickListener(v -> dialog.dismiss());
+            // 默认焦点在「继续观看」：连按返回不会误退出
+            btnCancel.requestFocus();
         }
         dialog.show();
     }
@@ -1790,6 +1829,7 @@ public class MainActivity extends Activity {
         Log.d(TAG, "playChannel called with index: " + index);
         // Switching channels (or returning to live) always leaves catchup.
         mCatchup.clear();
+        mOverlay.clearPause();
         // A deliberate channel change cancels any pending reconnect for the previous channel
         cancelReconnect();
         Channel channel = mChannelRepository.getChannel(index);
@@ -1807,7 +1847,12 @@ public class MainActivity extends Activity {
                 if (mChannelListComponent != null) {
                     mChannelListComponent.setCurrentChannel(index);
                 }
-                refreshTimeShiftBar(true);
+                // HUD 已打开就原地刷新；否则只弹换台卡片，不占用左右键
+                refreshTimeShiftBar(false);
+                if (!isHudVisible() && !mChannelListVisible) {
+                    mOverlay.showZapCard(index + 1, channel, 1);
+                    refreshCornerOverlay();
+                }
             });
             // Save current channel for resume on next app startup
             AppConfig.setLastChannelUrl(url);
@@ -1829,11 +1874,13 @@ public class MainActivity extends Activity {
             case VideoView.STATE_PREPARING:
             case VideoView.STATE_BUFFERING:
                 if (mReconnectAttempt == 0) {
-                    // Don't overwrite the reconnect countdown with a plain "buffering"
-                    mPlaybackStatusView.showMessage(getString(R.string.playback_buffering));
+                    // 重连倒计时优先，不被网速覆盖
+                    mOverlay.startBuffering();
                 }
                 break;
             case VideoView.STATE_ERROR:
+                mOverlay.stopBuffering();
+                mOverlay.clearPause();
                 if (mCatchup.active) {
                     // The catchup server refused this moment (most operators only keep a limited
                     // window). Say so: being dropped back to live with no explanation reads as
@@ -1938,6 +1985,9 @@ public class MainActivity extends Activity {
     private void cancelReconnect() {
         mReconnectAttempt = 0;
         mMainHandler.removeCallbacks(mReconnectRunnable);
+        if (mOverlay != null) {
+            mOverlay.stopBuffering();
+        }
         if (mPlaybackStatusView != null) {
             mPlaybackStatusView.hideMessage();
         }
@@ -1963,8 +2013,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         applyConfigurationChanges();
-        if (mVideoView != null) {
-            mVideoView.resume();
+        if (mOverlay != null) {
+            mOverlay.onHostResume();
         }
     }
 
@@ -1978,13 +2028,7 @@ public class MainActivity extends Activity {
     private void applyConfigurationChanges() {
         // The settings now announce themselves (AppConfig.OnSettingsChangedListener), so there is
         // nothing to compare here; this is only the "player came back to the front" path.
-        updateCatchupBadge();
-        if (mChannelListComponent != null) {
-            mChannelListComponent.applyOpacity();
-        }
-        if (mTimeShiftBar != null) {
-            mTimeShiftBar.applyOpacity();
-        }
+        refreshCornerOverlay();
     }
 
     /**
@@ -2029,15 +2073,12 @@ public class MainActivity extends Activity {
                 mEpgManager.loadEpg(current);
             }
         }
-        if (keys.contains(AppConfig.SIDEBAR_OPACITY_KEY)) {
-            if (mChannelListComponent != null) {
-                mChannelListComponent.applyOpacity();
-            }
-            if (mTimeShiftBar != null) {
-                mTimeShiftBar.applyOpacity();
-            }
+        if (keys.contains(AppConfig.LANGUAGE_KEY)) {
+            // 语言切换：重建界面让所有文字换成新语言（播放会从上次的频道继续）
+            recreate();
+            return;
         }
-        updateCatchupBadge();
+        refreshCornerOverlay();
     }
 
     @Override
@@ -2046,8 +2087,8 @@ public class MainActivity extends Activity {
         stopTimeShiftTicker();
         // Leaving mid-press must not turn into a favourite once we are no longer on screen
         mMainHandler.removeCallbacks(mOkLongPressRunnable);
-        if (mVideoView != null) {
-            mVideoView.pause();
+        if (mOverlay != null) {
+            mOverlay.onHostPause();
         }
     }
 
@@ -2055,6 +2096,9 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         mDestroyed = true;
         mMainHandler.removeCallbacks(mReconnectRunnable);
+        if (mOverlay != null) {
+            mOverlay.stopBuffering();
+        }
         mMainHandler.removeCallbacks(mNumberCommitRunnable);
         mMainHandler.removeCallbacks(mOkLongPressRunnable);
         stopTimeShiftTicker();

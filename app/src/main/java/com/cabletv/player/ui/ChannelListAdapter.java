@@ -6,7 +6,6 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -21,7 +20,6 @@ import com.cabletv.player.epg.EpgCache;
 import com.cabletv.player.epg.EpgManager;
 import com.cabletv.player.model.Channel;
 import android.util.Log;
-import com.bumptech.glide.Glide;
 import xyz.doikki.videoplayer.controller.ControlWrapper;
 import xyz.doikki.videoplayer.controller.IControlComponent;
 import java.text.SimpleDateFormat;
@@ -116,9 +114,9 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
         RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
                 RecyclerView.LayoutParams.MATCH_PARENT,
                 dp2px(ChannelListComponent.CHANNEL_ROW_HEIGHT_DP));
-        lp.setMargins(dp2px(6), dp2px(2), dp2px(6), dp2px(2));
+        lp.setMargins(dp2px(12), dp2px(2), dp2px(12), dp2px(2));
         view.setLayoutParams(lp);
-        view.setPadding(dp2px(8), dp2px(4), dp2px(8), dp2px(4));
+        view.setPadding(dp2px(6), dp2px(4), dp2px(8), dp2px(4));
         return new ChannelViewHolder(view, mContext, mScroller);
     }
 
@@ -143,8 +141,9 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
 
     static class ChannelViewHolder extends RecyclerView.ViewHolder {
         private final LinearLayout container;
+        private final View playingBar;
         private final TextView numberView;
-        private final ImageView logoView;
+        private final ChannelLogoView logoView;
         private final LinearLayout textContainer;
         private final TextView nameView;
         private final TextView epgView;
@@ -161,10 +160,21 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setGravity(Gravity.CENTER_VERTICAL);
 
+            // 正在播放：行最左侧的红色竖条；其他行 INVISIBLE 占位，台号保持对齐
+            playingBar = new View(context);
+            android.graphics.drawable.GradientDrawable bar = new android.graphics.drawable.GradientDrawable();
+            bar.setColor(0xFFE11D48);
+            bar.setCornerRadius(dp2px(2));
+            playingBar.setBackground(bar);
+            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp2px(3), dp2px(24));
+            barLp.rightMargin = dp2px(4);
+            container.addView(playingBar, barLp);
+
             // The number the viewer can type on the remote to reach this channel
             numberView = new TextView(context);
-            numberView.setTextColor(0xFF64748B);
+            numberView.setTextColor(0xFF8A8A93);
             numberView.setTextSize(13);
+            numberView.setFontFeatureSettings("tnum");
             numberView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             numberView.setSingleLine(true);
             numberView.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -173,15 +183,12 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
                     LinearLayout.LayoutParams.MATCH_PARENT));
             container.addView(numberView);
 
-            // Logo with refined background pill holder
-            logoView = new ImageView(context);
-            logoView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-            logoView.setBackgroundResource(R.drawable.bg_channel_logo_holder);
-            logoView.setPadding(dp2px(4), dp2px(2), dp2px(4), dp2px(2));
+            // 台标块：没有台标时是文字块，尺寸固定，整列对齐
+            logoView = new ChannelLogoView(context, 6, 11);
             LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(
-                    dp2px(42),
-                    dp2px(34));
-            logoParams.leftMargin = dp2px(8);
+                    dp2px(48),
+                    dp2px(32));
+            logoParams.leftMargin = dp2px(10);
             logoView.setLayoutParams(logoParams);
             container.addView(logoView);
 
@@ -193,7 +200,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
                     0,
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     1.0f));
-            textContainer.setPadding(dp2px(8), 0, 0, 0);
+            textContainer.setPadding(dp2px(12), 0, 0, 0);
 
             nameView = new TextView(context);
             nameView.setTextColor(0xFFE2E8F0);
@@ -220,7 +227,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
 
             favoriteView = new TextView(context);
             favoriteView.setText("★");
-            favoriteView.setTextColor(0xFFFFB800);
+            favoriteView.setTextColor(0xFFFBBF24);
             favoriteView.setTextSize(13);
             favoriteView.setGravity(Gravity.CENTER_VERTICAL);
             favoriteView.setLayoutParams(new LinearLayout.LayoutParams(
@@ -248,58 +255,34 @@ public class ChannelListAdapter extends RecyclerView.Adapter<ChannelListAdapter.
             numberView.setText(number > 0 ? String.valueOf(number) : "");
             favoriteView.setVisibility(isFavorite ? View.VISIBLE : View.GONE);
 
-            // Load logo
-            if (channel.logo != null && !channel.logo.isEmpty()) {
-                Glide.with(context)
-                        .load(channel.logo)
-                        .centerInside()
-                        .into(logoView);
-            } else {
-                logoView.setImageDrawable(null);
-            }
+            logoView.bind(channel.name, channel.logo);
 
+            playingBar.setVisibility(isCurrent ? View.VISIBLE : View.INVISIBLE);
+
+            float scale = 1.0f;
+            int epgColor;
             if (isSelected && focusOnChannels) {
-                nameView.setTextColor(0xFF00E5FF);
-                numberView.setTextColor(0xFF00E5FF);
-                nameView.setTextSize(17);
-                container.setBackgroundResource(R.drawable.channel_item_selected_bg);
-                container.animate()
-                        .scaleX(1.03f)
-                        .scaleY(1.03f)
-                        .setDuration(150)
-                        .start();
-            } else if (isSelected && !focusOnChannels) {
-                // Selected but focus on another panel - dimmer highlight
-                nameView.setTextColor(0xFF66E5FF);
-                numberView.setTextColor(0xFF66E5FF);
-                nameView.setTextSize(16);
-                container.setBackgroundResource(R.drawable.channel_item_selected_dim_bg);
-                container.animate()
-                        .scaleX(1.0f)
-                        .scaleY(1.0f)
-                        .setDuration(150)
-                        .start();
-            } else if (isCurrent) {
-                nameView.setTextColor(0xFFFFFFFF);
-                numberView.setTextColor(0xFF00E676);
-                nameView.setTextSize(16);
-                container.setBackgroundColor(0x00000000);
-                container.animate()
-                        .scaleX(1.0f)
-                        .scaleY(1.0f)
-                        .setDuration(150)
-                        .start();
+                // 焦点行：白底深字，略微放大
+                nameView.setTextColor(0xFF0A0A0B);
+                numberView.setTextColor(isCurrent ? 0xFFE11D48 : 0xFF52525B);
+                epgColor = 0xFF3F3F46;
+                container.setBackgroundResource(R.drawable.bg_row_focus);
+                scale = 1.04f;
+            } else if (isSelected) {
+                // 焦点在其他栏：淡白底
+                nameView.setTextColor(0xFFF5F5F7);
+                numberView.setTextColor(isCurrent ? 0xFFFB7185 : 0xFFA1A1AA);
+                epgColor = 0xFFA1A1AA;
+                container.setBackgroundResource(R.drawable.bg_row_selected);
             } else {
-                nameView.setTextColor(0xFFE2E8F0);
-                numberView.setTextColor(0xFF64748B);
-                nameView.setTextSize(16);
+                nameView.setTextColor(0xFFF5F5F7);
+                numberView.setTextColor(isCurrent ? 0xFFFB7185 : 0xFF8A8A93);
+                epgColor = 0xFFA1A1AA;
                 container.setBackgroundColor(0x00000000);
-                container.animate()
-                        .scaleX(1.0f)
-                        .scaleY(1.0f)
-                        .setDuration(150)
-                        .start();
             }
+            nameView.setTextSize(16);
+            epgView.setTextColor(epgColor);
+            container.animate().scaleX(scale).scaleY(scale).setDuration(150).start();
 
             // Show EPG info if enabled
             if (AppConfig.isEpgDisplayEnabled() && epgManager != null) {

@@ -80,39 +80,4 @@ public class SingleProgramTimelineTest {
         assertEquals(end, bar.getWindowEnd());
         assertEquals(start + 500_000L, bar.findShownPositionMs());
     }
-
-    @Test
-    public void timeShiftBar_applyOpacity_handlesAllLevels() {
-        TimeShiftBarComponent bar = buildBar();
-        // Translucent (default)
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_TRANSLUCENT);
-        bar.applyOpacity();
-        assertNotNull(bar.getBackground());
-
-        // Semi-opaque
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_SEMI_OPAQUE);
-        bar.applyOpacity();
-        assertNotNull(bar.getBackground());
-
-        // Opaque
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_OPAQUE);
-        bar.applyOpacity();
-        assertNotNull(bar.getBackground());
-    }
-
-    @Test
-    public void channelListComponent_applyOpacity_handlesAllLevels() {
-        Context context = RuntimeEnvironment.getApplication();
-        com.cabletv.player.config.ChannelNavigator nav = new com.cabletv.player.config.ChannelNavigator();
-        ChannelListComponent comp = new ChannelListComponent(context, nav);
-
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_TRANSLUCENT);
-        comp.applyOpacity();
-
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_SEMI_OPAQUE);
-        comp.applyOpacity();
-
-        com.cabletv.player.config.AppConfig.setSidebarOpacity(com.cabletv.player.config.AppConfig.SIDEBAR_OPAQUE);
-        comp.applyOpacity();
-    }
 }

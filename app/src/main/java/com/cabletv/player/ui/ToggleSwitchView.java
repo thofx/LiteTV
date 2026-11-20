@@ -52,11 +52,11 @@ public class ToggleSwitchView extends View {
         super(context, attrs);
         setFocusable(true);
         setClickable(true);
-        mTrackPaint.setColor(Color.parseColor("#1E293B"));
+        mTrackPaint.setColor(Color.parseColor("#3A3A40"));
         mKnobPaint.setColor(Color.WHITE);
         mFocusPaint.setStyle(Paint.Style.STROKE);
         mFocusPaint.setStrokeWidth(dp2px(2));
-        mFocusPaint.setColor(Color.parseColor("#00E5FF"));
+        mFocusPaint.setColor(Color.parseColor("#F5F5F7"));
     }
 
     public boolean isChecked() {
@@ -90,8 +90,8 @@ public class ToggleSwitchView extends View {
         float inset = dp2px(1);
         mTrackRect.set(inset, inset, getWidth() - inset, getHeight() - inset);
         mTrackPaint.setColor(mChecked
-                ? Color.parseColor("#00E5FF")
-                : Color.parseColor("#1E293B"));
+                ? Color.parseColor("#E11D48")
+                : Color.parseColor("#3A3A40"));
         canvas.drawRoundRect(mTrackRect, getHeight() / 2f, getHeight() / 2f, mTrackPaint);
 
         float knobSize = dp2px(KNOB_SIZE_DP);
@@ -99,7 +99,7 @@ public class ToggleSwitchView extends View {
         float left = mChecked ? mTrackRect.right - margin - knobSize : mTrackRect.left + margin;
         mKnobRect.set(left, mTrackRect.top + margin, left + knobSize,
                 mTrackRect.top + margin + knobSize);
-        mKnobPaint.setColor(mChecked ? Color.parseColor("#0A0E17") : Color.WHITE);
+        mKnobPaint.setColor(Color.WHITE);
         canvas.drawOval(mKnobRect, mKnobPaint);
 
         if (isFocused()) {

@@ -124,7 +124,7 @@ public class SettingsPanelTest {
         assertNotNull(mPanel.findViewById(R.id.web_server_toggle));
         assertNotNull(mPanel.findViewById(R.id.merge_same_name_toggle));
         assertNotNull(mPanel.findViewById(R.id.epg_preference_group));
-        assertNotNull(mPanel.findViewById(R.id.sidebar_opacity_group));
+        assertNotNull(mPanel.findViewById(R.id.language_group));
         assertNotNull(mPanel.findViewById(R.id.video_render_mode_group));
         assertNotNull(mPanel.findViewById(R.id.video_decode_mode_group));
         assertNotNull(mPanel.findViewById(R.id.video_tunneling_toggle));

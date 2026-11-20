@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 设置面板的单选行：焦点白底（文字由 cine_focus_text 反色） -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/apple_row_focus" />
+            <solid android:color="@color/cine_focus" />
             <corners android:radius="12dp" />
-            <stroke
-                android:width="1.5dp"
-                android:color="@color/colorAccent" />
         </shape>
     </item>
     <item>

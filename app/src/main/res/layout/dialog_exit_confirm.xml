@@ -1,58 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 退出确认：居中卡片，默认焦点在「继续观看」，避免误退出 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="440dp"
+    android:layout_width="360dp"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_dialog_exit_card"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="28dp">
+    android:paddingStart="28dp"
+    android:paddingTop="28dp"
+    android:paddingEnd="28dp"
+    android:paddingBottom="24dp">
+
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_exit_icon_disc"
+        android:importantForAccessibility="no"
+        android:padding="12dp"
+        android:src="@drawable/ic_power" />
 
     <TextView
         android:id="@+id/dialog_title"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
         android:text="@string/exit_confirm_title"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/cine_text_1"
         android:textSize="20sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/dialog_message"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:lineSpacingMultiplier="1.2"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
         android:text="@string/exit_confirm_message"
-        android:textColor="#94A3B8"
-        android:textSize="14sp" />
+        android:textColor="@color/cine_text_2"
+        android:textSize="13sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
-        android:gravity="end|center_vertical"
+        android:layout_marginTop="22dp"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_cancel"
-            android:layout_width="110dp"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_dialog_cancel_button"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/apple_pill_button"
             android:focusable="true"
-            android:text="@string/exit_cancel"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+            android:stateListAnimator="@null"
+            android:text="@string/exit_keep_watching"
+            android:textAllCaps="false"
+            android:textColor="@color/cine_focus_text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btn_confirm"
-            android:layout_width="110dp"
-            android:layout_height="42dp"
-            android:layout_marginStart="16dp"
-            android:background="@drawable/bg_dialog_confirm_button"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/apple_pill_button"
             android:focusable="true"
-            android:text="@string/exit_confirm"
-            android:textColor="@color/color_dialog_confirm_text"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:stateListAnimator="@null"
+            android:text="@string/exit_leave"
+            android:textAllCaps="false"
+            android:textColor="@color/cine_focus_text"
+            android:textSize="15sp" />
     </LinearLayout>
-
 </LinearLayout>

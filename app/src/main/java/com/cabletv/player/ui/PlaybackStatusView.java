@@ -18,10 +18,12 @@ public class PlaybackStatusView extends TextView {
     public PlaybackStatusView(@NonNull Context context) {
         super(context);
         setBackgroundResource(R.drawable.bg_playback_status);
-        setTextColor(0xFFFFFFFF);
-        setTextSize(15);
+        setTextColor(0xFFF5F5F7);
+        setTextSize(16);
         setGravity(Gravity.CENTER);
-        setPadding(dp2px(20), dp2px(12), dp2px(20), dp2px(12));
+        setLineSpacing(0, 1.2f);
+        setFontFeatureSettings("tnum");
+        setPadding(dp2px(24), dp2px(14), dp2px(24), dp2px(14));
         setVisibility(GONE);
     }
 
@@ -43,6 +45,14 @@ public class PlaybackStatusView extends TextView {
     public void hideMessage() {
         setText("");
         setVisibility(GONE);
+    }
+
+    /** 把 bytes/s 格式化成 KB/s 或 MB/s。 */
+    static String formatSpeed(long bytesPerSecond) {
+        if (bytesPerSecond < 1024 * 1024) {
+            return Math.max(0, bytesPerSecond / 1024) + " KB/s";
+        }
+        return String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSecond / (1024f * 1024f));
     }
 
     private int dp2px(int dp) {
