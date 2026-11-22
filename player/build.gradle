@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "com.github.tvbox.osc.player"
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdkVersion 21
@@ -37,13 +37,17 @@ android {
 dependencies {
     implementation "androidx.annotation:annotation:1.3.0"
     implementation "com.squareup.okhttp3:okhttp:3.12.11"
-    // AndroidX Media3, the maintained successor of ExoPlayer. Pinned to 1.4.1 on purpose: it is
-    // the last release that compiles against this project's compileSdk 34 (1.5+ demands
-    // compileSdk 35, which in turn needs a newer AGP than 8.2), while still supporting minSdk 21
-    // and shipping pieces the player previously hand-rolled, such as the OkHttp data source.
-    api "androidx.media3:media3-exoplayer:1.4.1"
-    api "androidx.media3:media3-exoplayer-hls:1.4.1"
-    api "androidx.media3:media3-exoplayer-dash:1.4.1"
-    api "androidx.media3:media3-datasource-okhttp:1.4.1"
-    api "androidx.media3:media3-database:1.4.1"
+    // AndroidX Media3, the maintained successor of ExoPlayer. Pinned to 1.8.0 on purpose:
+    // - it fixes H.265 MPEG-TS streams getting stuck (androidx/media#2069, broken since 1.4.0),
+    //   which hits Chinese IPTV HEVC channels;
+    // - it is the last line that still supports minSdk 21 (1.9.0 raised it to 23);
+    // - it avoids 1.5.x, where setting the surface after the player is ready rebuffers
+    //   (#1973, VideoView.resume() does exactly that), and 1.9.x-1.10.0, whose tunneling mode
+    //   can crash on start (#3099).
+    // It needs compileSdk 35, hence AGP 8.6+. 1.11+ would need compileSdk 36 and minSdk 23.
+    api "androidx.media3:media3-exoplayer:1.8.0"
+    api "androidx.media3:media3-exoplayer-hls:1.8.0"
+    api "androidx.media3:media3-exoplayer-dash:1.8.0"
+    api "androidx.media3:media3-datasource-okhttp:1.8.0"
+    api "androidx.media3:media3-database:1.8.0"
 }
